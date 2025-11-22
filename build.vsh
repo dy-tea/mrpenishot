@@ -1,0 +1,32 @@
+#!/usr/bin/env -S v
+
+fn sh(cmd string) string {
+  println('❯ ${cmd}')
+  return execute_or_exit(cmd).output
+}
+
+sh('which wayland-scanner')
+sh('which pkg-config')
+
+if sh('pkg-config --modversion wayland-protocols').f64() < 1.37 {
+  println('wayland-protocols version must be >= 1.37')
+  exit(1)
+}
+
+wl_proto_dir := sh('pkg-config --variable=pkgdatadir wayland-protocols').trim_space()
+
+protocols := [
+  './protocols/wlr-screencopy-unstable-v1.xml'
+  wl_proto_dir + '/staging/ext-image-capture-source/ext-image-capture-source-v1.xml'
+  wl_proto_dir + '/staging/ext-image-copy-capture/ext-image-copy-capture-v1.xml',
+  wl_proto_dir + '/unstable/xdg-output/xdg-output-unstable-v1.xml',
+]
+build_dir := './builddir'
+
+sh('mkdir -p ${build_dir}')
+
+for protocol in protocols {
+  name := base(protocol).trim_right('.xml')
+  sh('wayland-scanner client-header ${protocol} ${build_dir}/${name}.h')
+  sh('wayland-scanner private-code ${protocol} ${build_dir}/${name}.c')
+}
