@@ -5,6 +5,16 @@ fn sh(cmd string) string {
   return execute_or_exit(cmd).output
 }
 
+source_dir := './src'
+include_dir := './include'
+
+if arguments().contains('clean') {
+  cmd := 'rm -rf ${source_dir} ${include_dir}'
+  execute('rm -rf ${source_dir} ${include_dir}')
+  println('❯ ${cmd}')
+  return
+}
+
 sh('which wayland-scanner')
 sh('which pkg-config')
 
@@ -26,14 +36,12 @@ protocols := [
   wl_proto_dir + '/staging/ext-image-copy-capture/ext-image-copy-capture-v1.xml',
   wl_proto_dir + '/unstable/xdg-output/xdg-output-unstable-v1.xml',
 ]
-source_dir := './src'
-include_dir := './include'
 
 sh('mkdir -p ${source_dir}')
 sh('mkdir -p ${include_dir}')
 
 for protocol in protocols {
-  name := base(protocol).trim_right('.xml')
+  name := base(protocol).replace('.xml', '-protocol')
   sh('wayland-scanner private-code ${protocol} ${source_dir}/${name}.c')
   sh('wayland-scanner client-header ${protocol} ${include_dir}/${name}.h')
 }
