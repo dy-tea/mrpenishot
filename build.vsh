@@ -13,6 +13,11 @@ if sh('pkg-config --modversion wayland-protocols').f64() < 1.37 {
   exit(1)
 }
 
+if sh('pkg-config --modversion pixman-1') == '' {
+  println('pixman-1 not found')
+  exit(1)
+}
+
 wl_proto_dir := sh('pkg-config --variable=pkgdatadir wayland-protocols').trim_space()
 
 protocols := [
@@ -21,12 +26,14 @@ protocols := [
   wl_proto_dir + '/staging/ext-image-copy-capture/ext-image-copy-capture-v1.xml',
   wl_proto_dir + '/unstable/xdg-output/xdg-output-unstable-v1.xml',
 ]
-build_dir := './builddir'
+source_dir := './src'
+include_dir := './include'
 
-sh('mkdir -p ${build_dir}')
+sh('mkdir -p ${source_dir}')
+sh('mkdir -p ${include_dir}')
 
 for protocol in protocols {
   name := base(protocol).trim_right('.xml')
-  sh('wayland-scanner client-header ${protocol} ${build_dir}/${name}.h')
-  sh('wayland-scanner private-code ${protocol} ${build_dir}/${name}.c')
+  sh('wayland-scanner private-code ${protocol} ${source_dir}/${name}.c')
+  sh('wayland-scanner client-header ${protocol} ${include_dir}/${name}.h')
 }
