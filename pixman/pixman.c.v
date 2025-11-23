@@ -6,21 +6,21 @@ module pixman
 
 // boolean
 
-type C.pixman_bool_t = bool
+pub type C.pixman_bool_t = bool
 
 // fixed point numbers
 
-type C.pixman_fixed_32_32_t = i64
-type C.pixman_fixed_48_16_t = i64
-type C.pixman_fixed_1_31_t = u32
-type C.pixman_fixed_1_16_t = u32
-type C.pixman_fixed_16_16_t = i32
-type C.pixman_fixed_t = i32
+pub type C.pixman_fixed_32_32_t = i64
+pub type C.pixman_fixed_48_16_t = i64
+pub type C.pixman_fixed_1_31_t = u32
+pub type C.pixman_fixed_1_16_t = u32
+pub type C.pixman_fixed_16_16_t = i32
+pub type C.pixman_fixed_t = i32
 
-const pixman_fixed_e = 1
-const pixman_fixed_1 = pixman_int_to_fixed(1)
-const pixman_fixed_1_minus_e = pixman_fixed_1 - pixman_fixed_e
-const pixman_fixed_minus_1 = pixman_int_to_fixed(-1)
+pub const pixman_fixed_e = 1
+pub const pixman_fixed_1 = pixman_int_to_fixed(1)
+pub const pixman_fixed_1_minus_e = pixman_fixed_1 - pixman_fixed_e
+pub const pixman_fixed_minus_1 = pixman_int_to_fixed(-1)
 
 @[inline]
 pub fn pixman_fixed_to_int(f C.pixman_fixed_t) int {
@@ -67,48 +67,48 @@ pub fn pixman_fixed_mod_2(f C.pixman_fixed_t) C.pixman_fixed_t {
 	return f & pixman_fixed_1 | pixman_fixed_1_minus_e
 }
 
-const pixman_max_fixed_48_16 = 0x7fffffff
-const pixman_min_fixed_48_16 = -(1 << 31)
+pub const pixman_max_fixed_48_16 = 0x7fffffff
+pub const pixman_min_fixed_48_16 = -(1 << 31)
 
 // misc structs
 
-type C.pixman_color_t = C.pixman_color
-type C.pixman_point_fixed_t = C.pixman_point_fixed
-type C.pixman_line_fixed_t = C.pixman_line_fixed
-type C.pixman_vector_t = C.pixman_vector
-type C.pixman_transform_t = C.pixman_transform
+pub type C.pixman_color_t = C.pixman_color
+pub type C.pixman_point_fixed_t = C.pixman_point_fixed
+pub type C.pixman_line_fixed_t = C.pixman_line_fixed
+pub type C.pixman_vector_t = C.pixman_vector
+pub type C.pixman_transform_t = C.pixman_transform
 
-struct C.pixman_color {
+pub struct C.pixman_color {
 	red   u16
 	green u16
 	blue  u16
 	alpha u16
 }
 
-struct C.pixman_point_fixed {
+pub struct C.pixman_point_fixed {
 	x C.pixman_fixed_t
 	y C.pixman_fixed_t
 }
 
-struct C.pixman_line_fixed {
+pub struct C.pixman_line_fixed {
 	p1 C.pixman_point_fixed_t
 	p2 C.pixman_point_fixed_t
 }
 
 // fixed point matrices
 
-struct C.pixman_vector {
+pub struct C.pixman_vector {
 	vector [3]C.pixman_fixed_t
 }
 
-struct C.pixman_transform {
+pub struct C.pixman_transform {
 	matrix [3][3]C.pixman_fixed_t
 }
 
 @[typedef]
-union C.pixman_image {}
+pub union C.pixman_image {}
 
-type C.pixman_image_t = C.pixman_image
+pub type C.pixman_image_t = C.pixman_image
 
 fn C.pixman_transform_init_identity(matrix &C.pixman_transform)
 fn C.pixman_transform_point_3d(transform &C.pixman_transform, vector &C.pixman_vector) C.pixman_bool_t
@@ -129,11 +129,11 @@ fn C.pixman_transform_is_inverse(a &C.pixman_transform, b &C.pixman_transform) C
 
 // floating point matrices
 
-struct C.pixman_f_vector {
+pub struct C.pixman_f_vector {
 	v [3]f64
 }
 
-struct C.pixman_f_transform {
+pub struct C.pixman_f_transform {
 	m [3][3]f64
 }
 
@@ -226,31 +226,31 @@ pub enum Pixman_op_t {
 
 // regions
 
-type C.pixman_region16_data_t = C.pixman_region16_data
-type C.pixman_box16_t = C.pixman_box16
-type C.pixman_rectangle16_t = C.pixman_rectangle16
-type C.pixman_region16_t = C.pixman_region16
+pub type C.pixman_region16_data_t = C.pixman_region16_data
+pub type C.pixman_box16_t = C.pixman_box16
+pub type C.pixman_rectangle16_t = C.pixman_rectangle16
+pub type C.pixman_region16_t = C.pixman_region16
 
-struct C.pixman_region16_data {
+pub struct C.pixman_region16_data {
 	size     u64
 	numRects u64
 }
 
-struct C.pixman_rectangle16 {
+pub struct C.pixman_rectangle16 {
 	x      i16
 	y      i16
 	width  u16
 	height u16
 }
 
-struct C.pixman_box16 {
+pub struct C.pixman_box16 {
 	x1 i16
 	y1 i16
 	x2 i16
 	y2 i16
 }
 
-struct C.pixman_region16 {
+pub struct C.pixman_region16 {
 	extents C.pixman_box16_t
 	data    &C.pixman_region16_data_t
 }
@@ -294,31 +294,31 @@ fn C.pixman_region_clear(region &C.pixman_region16_t)
 
 // 32 bit regions
 
-type C.pixman_region32_data_t = C.pixman_region32_data
-type C.pixman_box32_t = C.pixman_box32
-type C.pixman_rectangle32_t = C.pixman_rectangle32
-type C.pixman_region32_t = C.pixman_region32
+pub type C.pixman_region32_data_t = C.pixman_region32_data
+pub type C.pixman_box32_t = C.pixman_box32
+pub type C.pixman_rectangle32_t = C.pixman_rectangle32
+pub type C.pixman_region32_t = C.pixman_region32
 
-struct C.pixman_region32_data {
+pub struct C.pixman_region32_data {
 	size     f64
 	numRects f64
 }
 
-struct C.pixman_rectangle32 {
+pub struct C.pixman_rectangle32 {
 	x      i32
 	y      i32
 	width  u32
 	height u32
 }
 
-struct C.pixman_box32 {
+pub struct C.pixman_box32 {
 	x1 i32
 	y1 i32
 	x2 i32
 	y2 i32
 }
 
-struct C.pixman_region32 {
+pub struct C.pixman_region32 {
 	extents C.pixman_box32_t
 	data    &C.pixman_region32_data_t
 }
@@ -356,31 +356,31 @@ fn C.pixman_region32_clear(region &C.pixman_region32_t)
 
 // 64 bit fractional regions
 
-type C.pixman_region64f_data_t = C.pixman_region64f_data
-type C.pixman_box64f_t = C.pixman_box64f
-type C.pixman_rectangle64f_t = C.pixman_rectangle64f
-type C.pixman_region64f_t = C.pixman_region64f
+pub type C.pixman_region64f_data_t = C.pixman_region64f_data
+pub type C.pixman_box64f_t = C.pixman_box64f
+pub type C.pixman_rectangle64f_t = C.pixman_rectangle64f
+pub type C.pixman_region64f_t = C.pixman_region64f
 
-struct C.pixman_region64f_data {
+pub struct C.pixman_region64f_data {
 	size     f64
 	numRects f64
 }
 
-struct C.pixman_rectangle64f {
+pub struct C.pixman_rectangle64f {
 	x      f64
 	y      f64
 	width  f64
 	height f64
 }
 
-struct C.pixman_box64f {
+pub struct C.pixman_box64f {
 	x1 f64
 	y1 f64
 	x2 f64
 	y2 f64
 }
 
-struct C.pixman_region64f {
+pub struct C.pixman_region64f {
 	extents C.pixman_box64f_t
 	data    &C.pixman_region64f_data_t
 }
@@ -430,25 +430,25 @@ fn C.pixman_version_string() &char
 
 // images
 
-type C.pixman_indexed_t = C.pixman_indexed
-type Pixman_gradient_stop_t = C.pixman_gradient_stop
+pub type C.pixman_indexed_t = C.pixman_indexed
+pub type Pixman_gradient_stop_t = C.pixman_gradient_stop
 
-type Pixman_read_memory_func_t = fn (src voidptr, size int) u32
+pub type Pixman_read_memory_func_t = fn (src voidptr, size int) u32
 
-type Pixman_write_memory_func_t = fn (dst voidptr, value u32, size int)
+pub type Pixman_write_memory_func_t = fn (dst voidptr, value u32, size int)
 
-type Pixman_image_destroy_func_t = fn (image &C.pixman_image_t, data voidptr)
+pub type Pixman_image_destroy_func_t = fn (image &C.pixman_image_t, data voidptr)
 
-struct C.pixman_gradient_stop {
+pub struct C.pixman_gradient_stop {
 	x C.pixman_fixed_t
 	y C.pixman_color_t
 }
 
-const pixman_max_indexed = 256
+pub const pixman_max_indexed = 256
 
-type C.pixman_index_type = u8
+pub type C.pixman_index_type = u8
 
-struct C.pixman_indexed {
+pub struct C.pixman_indexed {
 	color C.pixman_bool_t
 	rgba  [pixman_max_indexed]u32
 	ent   [32768]C.pixman_index_type
@@ -521,18 +521,18 @@ pub fn pixman_format_depth(f int) u32 {
 	return pixman_format_a(f) + pixman_format_r(f) + pixman_format_g(f) + pixman_format_b(f)
 }
 
-const pixman_type_other = 0
-const pixman_type_a = 1
-const pixman_type_argb = 2
-const pixman_type_abgr = 3
-const pixman_type_color = 4
-const pixman_type_gray = 5
-const pixman_type_yuy2 = 6
-const pixman_type_yv12 = 7
-const pixman_type_bgra = 8
-const pixman_type_rgba = 9
-const pixman_type_argb_srgb = 10
-const pixman_type_rgba_float = 11
+pub const pixman_type_other = 0
+pub const pixman_type_a = 1
+pub const pixman_type_argb = 2
+pub const pixman_type_abgr = 3
+pub const pixman_type_color = 4
+pub const pixman_type_gray = 5
+pub const pixman_type_yuy2 = 6
+pub const pixman_type_yv12 = 7
+pub const pixman_type_bgra = 8
+pub const pixman_type_rgba = 9
+pub const pixman_type_argb_srgb = 10
+pub const pixman_type_rgba_float = 11
 
 @[inline]
 pub fn pixman_format_color(f int) bool {
@@ -627,7 +627,7 @@ pub enum Pixman_format_code_t {
 fn C.pixman_format_supported_destination(format Pixman_format_code_t) C.pixman_bool_t
 fn C.pixman_format_supported_source(format Pixman_format_code_t) C.pixman_bool_t
 
-// constructors
+// pub constructors
 
 fn C.pixman_image_create_solid_fill(color &Pixman_color_t) &C.pixman_image_t
 fn C.pixman_image_create_linear_gradient(p1 &C.pixman_point_fixed_t, p2 &C.pixman_point_fixed_t, stops &Pixman_gradient_stop_t, n_stops int) &C.pixman_image_t
@@ -678,7 +678,7 @@ pub enum Pixman_kernel_t {
 	lanczos3_stretched
 }
 
-fn C.pixman_filter_create_seperable_convolution(n_values &int, scale_x C.pixman_fixed_t, scale_y C.pixman_fixed_t, reconstruct_x C.pixman_kernel_t, reconstruct_y C.pixman_kernel_t, sample_x C.pixman_kernel_t, sample_y C.pixman_kernel_t, subsample_bits_x int, subsample_bits_y int) &C.pixman_fixed_t
+fn C.pixman_filter_create_seperable_convolution(n_values &int, scale_x C.pixman_fixed_t, scale_y C.pixman_fixed_t, repub construct_x C.pixman_kernel_t, reconstruct_y C.pixman_kernel_t, sample_x C.pixman_kernel_t, sample_y C.pixman_kernel_t, subsample_bits_x int, subsample_bits_y int) &C.pixman_fixed_t
 fn C.pixman_image_fill_rectangles(op Pixman_op_t, image &C.pixman_image_t, color C.pixman_color_t, n_rects int, rects &C.pixman_rectangle_t) C.pixman_bool_t
 fn C.pixman_image_fill_boxes(op Pixman_op_t, dest &C.pixman_image_t, color C.pixman_color_t, n_boxes int, boxes &C.pixman_box32_t) C.pixman_bool_t
 
@@ -691,10 +691,10 @@ fn C.pixman_image_composite64(op Pixman_op_t, src &C.pixman_image_t, mask &C.pix
 
 // glyphs
 
-struct C.pixman_glyph_cache_t {}
+pub struct C.pixman_glyph_cache_t {}
 
 @[typedef]
-struct C.pixman_glyph_t {
+pub struct C.pixman_glyph_t {
 	x     int
 	y     int
 	glyph voidptr

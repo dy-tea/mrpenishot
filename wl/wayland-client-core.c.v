@@ -3,7 +3,6 @@ module wl
 #flag linux -I/usr/include
 #include <wayland-client-core.h>
 
-struct C.timespec {} // FIXME
 struct C.wl_proxy {}
 struct C.wl_display {}
 struct C.wl_event_queue {}
