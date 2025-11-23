@@ -1,8 +1,34 @@
 #!/usr/bin/env -S v
 
+import term
+
 fn sh(cmd string) string {
   println('❯ ${cmd}')
   return execute_or_exit(cmd).output
+}
+
+fn err(msg string) {
+  println(term.fail_message(msg))
+  exit(1)
+}
+
+fn program_installed(name string) {
+  if sh('which ${name}') == "" {
+    err('program `${name}` not found')
+  }
+}
+
+fn pkg_installed(name string, version ?f64) {
+  ins := sh('pkg-config --modversion ${name}').f64()
+  if ins == 0 {
+    err('package `${name}` not found')
+  } else {
+    if ver := version {
+      if ins < ver {
+        err('package `${name}` version must be >= ${ver}')
+      }
+    }
+  }
 }
 
 source_dir := './src'
@@ -10,23 +36,17 @@ include_dir := './include'
 
 if arguments().contains('clean') {
   cmd := 'rm -rf ${source_dir} ${include_dir}'
-  execute('rm -rf ${source_dir} ${include_dir}')
+  execute(cmd)
   println('❯ ${cmd}')
   return
 }
 
-sh('which wayland-scanner')
-sh('which pkg-config')
+program_installed('wayland-scanner')
+program_installed('pkg-config')
 
-if sh('pkg-config --modversion wayland-protocols').f64() < 1.37 {
-  println('wayland-protocols version must be >= 1.37')
-  exit(1)
-}
-
-if sh('pkg-config --modversion pixman-1') == '' {
-  println('pixman-1 not found')
-  exit(1)
-}
+pkg_installed('wayland-protocols', 1.37)
+pkg_installed('wayland-client', none)
+pkg_installed('pixman-1', none)
 
 wl_proto_dir := sh('pkg-config --variable=pkgdatadir wayland-protocols').trim_space()
 
