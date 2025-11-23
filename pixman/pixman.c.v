@@ -1,3 +1,5 @@
+module pixman
+
 #flag linux -I/usr/include
 #define PIXMAN_H__
 #include <pixman-1/pixman.h>
@@ -137,14 +139,14 @@ struct C.pixman_f_transform {
 
 // TODO: fixed point fns
 
-enum Pixman_repeat_t {
+pub enum Pixman_repeat_t {
 	none
 	normal
 	pad
 	reflect
 }
 
-enum Pixman_dither_t {
+pub enum Pixman_dither_t {
 	none
 	fast
 	good
@@ -153,7 +155,7 @@ enum Pixman_dither_t {
 	ordered_blue_noise_64
 }
 
-enum Pixman_filter_t {
+pub enum Pixman_filter_t {
 	fast
 	good
 	best
@@ -163,7 +165,7 @@ enum Pixman_filter_t {
 	seperable_convolution
 }
 
-enum Pixman_op_t {
+pub enum Pixman_op_t {
 	clear        = 0x00
 	src          = 0x01
 	dst          = 0x02
@@ -253,7 +255,7 @@ struct C.pixman_region16 {
 	data    &C.pixman_region16_data_t
 }
 
-enum Pixman_region_overlap_t {
+pub enum Pixman_region_overlap_t {
 	out
 	in
 	part
@@ -539,7 +541,7 @@ pub fn pixman_format_color(f int) bool {
 		|| pixman_format_type(f) == pixman_type_rgba_float
 }
 
-enum Pixman_format_code_t {
+pub enum Pixman_format_code_t {
 	// 128bpp formats
 	rgba_float = int(pixman_format_byte(128, pixman_type_rgba_float, 32, 32, 32, 32))
 	// 96bpp formats
@@ -665,7 +667,7 @@ fn C.pixman_image_get_stride(image &C.pixman_image_t) int
 fn C.pixman_image_get_depth(image &C.pixman_image_t) int
 fn C.pixman_image_get_format(image &C.pixman_image_t) Pixman_format_code_t
 
-enum Pixman_kernel_t {
+pub enum Pixman_kernel_t {
 	impulse
 	box
 	linear

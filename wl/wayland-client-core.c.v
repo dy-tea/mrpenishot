@@ -1,7 +1,7 @@
 module wl
 
 #flag linux -I/usr/include
-#include <wayland-util.h>
+#include <wayland-client-core.h>
 
 struct C.timespec {} // FIXME
 struct C.wl_proxy {}
