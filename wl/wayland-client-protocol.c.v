@@ -1,6 +1,7 @@
 module wl
 
 #flag linux -I/usr/include
+#flag linux -lwayland-client
 #include <wayland-client-protocol.h>
 
 pub struct C.wl_buffer {}
@@ -125,12 +126,38 @@ fn C.wl_display_get_version(wl_display &C.wl_display) u32
 fn C.wl_display_sync(wl_display &C.wl_display) &C.wl_callback
 fn C.wl_display_get_registry(wl_display &C.wl_display) &C.wl_registry
 
-struct C.wl_registry_listener {
+// wl_registry
+
+pub struct C.wl_registry_listener {
 	global fn (voidptr, &C.wl_registry, u32, &char, u32)
 	global_remove fn (voidptr, &C.wl_registry, u32)
 }
 
-//...
+@[inline]
+fn C.wl_registry_add_listener(wl_registry &C.wl_registry, listener &C.wl_registry_listener, data voidptr) int
+
+pub const wl_registry_bind = 0
+
+pub const wl_registry_global_since_version = 1
+pub const wl_registry_global_remove_since_version = 1
+pub const wl_registry_bind_since_version = 1
+
+@[inline]
+fn C.wl_registry_set_user_data(wl_registry &C.wl_registry, user_data voidptr)
+
+@[inline]
+fn C.wl_registry_get_user_data(wl_registry &C.wl_registry) voidptr
+
+@[inline]
+fn C.wl_registry_get_version(wl_registry &C.wl_registry) u32
+
+@[inline]
+fn C.wl_registry_destroy(wl_registry &C.wl_registry)
+
+@[inline]
+fn C.wl_registry_bind(wl_registry &C.wl_registry, name u32, interface &C.wl_interface, version u32) voidptr
+
+// wl_callback
 
 struct C.wl_callback_listener {
 	done fn (data voidptr, wl_callback &C.wl_callback, callback_data u32)

@@ -1,13 +1,14 @@
 module wl
 
 #flag linux -I/usr/include
+#flag linux -lwayland-client
 #include <wayland-client-core.h>
 
-struct C.wl_proxy {}
-struct C.wl_display {}
-struct C.wl_event_queue {}
+pub struct C.wl_proxy {}
+pub struct C.wl_display {}
+pub struct C.wl_event_queue {}
 
-const wl_marshal_flag_destroy = 1 << 0
+pub const wl_marshal_flag_destroy = 1 << 0
 
 fn C.wl_event_queue_destroy(queue &C.wl_event_queue)
 
