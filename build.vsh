@@ -62,6 +62,6 @@ sh('mkdir -p ${include_dir}')
 
 for protocol in protocols {
   name := base(protocol).replace('.xml', '-protocol')
-  sh('wayland-scanner private-code ${protocol} ${source_dir}/${name}.c')
+  sh('wayland-scanner public-code ${protocol} ${source_dir}/${name}.c')
   sh('wayland-scanner client-header ${protocol} ${include_dir}/${name}.h')
 }

@@ -6,14 +6,14 @@ module wl
 
 pub struct C.wl_message {
 pub:
-	name      &u8
-	signature &u8
+	name      &char
+	signature &char
 	types     &&C.wl_interface
 }
 
 pub struct C.wl_interface {
 pub:
-	name         &u8
+	name         &char
 	version      int
 	method_count int
 	// methods &C.wl_message

@@ -1,17 +1,15 @@
 module main
 
 import wl
+import protocols
 
 struct State {
+mut:
 	display &C.wl_display
 	registry &C.wl_registry
-	shm &C.wl_shm
+	shm ?&C.wl_shm
 
-	outputs C.wl_list
-	toplevels C.wl_list
-
-	captures C.wl_list
-	n_done usize
+	zxdg_output_manager_v1 ?&C.zxdg_output_manager_v1
 }
 
 struct Output {

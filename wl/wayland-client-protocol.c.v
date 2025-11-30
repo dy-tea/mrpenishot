@@ -26,74 +26,29 @@ pub struct C.wl_subsurface {}
 pub struct C.wl_surface {}
 pub struct C.wl_touch {}
 
-@[extern]
-struct C.wl_display_interface {}
-
-@[extern]
-struct C.wl_registry_interface {}
-
-@[extern]
-struct C.wl_callback_interface {}
-
-@[extern]
-struct C.wl_compositor_interface {}
-
-@[extern]
-struct C.wl_shm_pool_interface {}
-
-@[extern]
-struct C.wl_shm_interface {}
-
-@[extern]
-struct C.wl_buffer_interface {}
-
-@[extern]
-struct C.wl_data_offer_interface {}
-
-@[extern]
-struct C.wl_data_source_interface {}
-
-@[extern]
-struct C.wl_data_device_interface {}
-
-@[extern]
-struct C.wl_data_device_manager_interface {}
-
-@[extern]
-struct C.wl_shell_interface {}
-
-@[extern]
-struct C.wl_shell_surface_interface {}
-
-@[extern]
-struct C.wl_surface_interface {}
-
-@[extern]
-struct C.wl_seat_interface {}
-
-@[extern]
-struct C.wl_pointer_interface {}
-
-@[extern]
-struct C.wl_keyboard_interface {}
-
-@[extern]
-struct C.wl_touch_interface {}
-
-@[extern]
-struct C.wl_output_interface {}
-
-@[extern]
-struct C.wl_region_interface {}
-
-@[extern]
-struct C.wl_subcompositor_interface {}
-
-@[extern]
-struct C.wl_subsurface_interface {}
-
-@[extern]
-struct C.wl_fixes_interface {}
+__global C.wl_display_interface C.wl_interface
+__global C.wl_registry_interface C.wl_interface
+__global C.wl_callback_interface C.wl_interface
+__global C.wl_compositor_interface C.wl_interface
+__global C.wl_shm_pool_interface C.wl_interface
+__global C.wl_shm_interface C.wl_interface
+__global C.wl_buffer_interface C.wl_interface
+__global C.wl_data_offer_interface C.wl_interface
+__global C.wl_data_source_interface C.wl_interface
+__global C.wl_data_device_interface C.wl_interface
+__global C.wl_data_device_manager_interface C.wl_interface
+__global C.wl_shell_interface C.wl_interface
+__global C.wl_shell_surface_interface C.wl_interface
+__global C.wl_surface_interface C.wl_interface
+__global C.wl_seat_interface C.wl_interface
+__global C.wl_pointer_interface C.wl_interface
+__global C.wl_keyboard_interface C.wl_interface
+__global C.wl_touch_interface C.wl_interface
+__global C.wl_output_interface C.wl_interface
+__global C.wl_region_interface C.wl_interface
+__global C.wl_subcompositor_interface C.wl_interface
+__global C.wl_subsurface_interface C.wl_interface
+__global C.wl_fixes_interface C.wl_interface
 
 // wl_display
 
@@ -133,7 +88,6 @@ pub struct C.wl_registry_listener {
 	global_remove fn (voidptr, &C.wl_registry, u32)
 }
 
-@[inline]
 fn C.wl_registry_add_listener(wl_registry &C.wl_registry, listener &C.wl_registry_listener, data voidptr) int
 
 pub const wl_registry_bind = 0
@@ -142,20 +96,11 @@ pub const wl_registry_global_since_version = 1
 pub const wl_registry_global_remove_since_version = 1
 pub const wl_registry_bind_since_version = 1
 
-@[inline]
 fn C.wl_registry_set_user_data(wl_registry &C.wl_registry, user_data voidptr)
-
-@[inline]
 fn C.wl_registry_get_user_data(wl_registry &C.wl_registry) voidptr
-
-@[inline]
 fn C.wl_registry_get_version(wl_registry &C.wl_registry) u32
-
-@[inline]
 fn C.wl_registry_destroy(wl_registry &C.wl_registry)
-
-@[inline]
-fn C.wl_registry_bind(wl_registry &C.wl_registry, name u32, interface &C.wl_interface, version u32) voidptr
+fn C.wl_registry_bind(&C.wl_registry, u32, &C.wl_interface, u32) voidptr
 
 // wl_callback
 
@@ -173,22 +118,11 @@ const wl_compositor_create_region = 1
 const wl_compositor_create_surface_since_version = 1
 const wl_compositor_create_region_since_version = 1
 
-@[inline]
 fn C.wl_compositor_set_user_data(wl_compositor &C.wl_compositor, user_data voidptr)
-
-@[inline]
 fn C.wl_compositor_get_user_data(wl_compositor &C.wl_compositor) voidptr
-
-@[inline]
 fn C.wl_compositor_get_version(wl_compositor &C.wl_compositor) u32
-
-@[inline]
 fn C.wl_compositor_destroy(wl_compositor &C.wl_compositor)
-
-@[inline]
 fn C.wl_compositor_create_surface(wl_compositor &C.wl_compositor) &C.wl_surface
-
-@[inline]
 fn C.wl_compositor_create_region(wl_compositor &C.wl_compositor) &C.wl_region
 
 // wl_shm_pool
@@ -201,22 +135,11 @@ const wl_shm_pool_create_buffer_since_version = 1
 const wl_shm_pool_destroy_since_version = 1
 const wl_shm_pool_resize_since_version = 1
 
-@[inline]
 fn C.wl_shm_pool_set_user_data(wl_shm_pool &C.wl_shm_pool, user_data voidptr)
-
-@[inline]
 fn C.wl_shm_pool_get_user_data(wl_shm_pool &C.wl_shm_pool) voidptr
-
-@[inline]
 fn C.wl_shm_pool_get_version(wl_shm_pool &C.wl_shm_pool) u32
-
-@[inline]
 fn C.wl_shm_pool_create_buffer(wl_shm_pool &C.wl_shm_pool, offset i32, width i32, height i32, stride i32, format u32) &C.wl_buffer
-
-@[inline]
 fn C.wl_shm_pool_destroy(wl_shm_pool &C.wl_shm_pool)
-
-@[inline]
 fn C.wl_shm_pool_resize(wl_shm_pool &C.wl_shm_pool, size i32)
 
 // wl_shm
@@ -466,7 +389,6 @@ struct C.wl_shm_listener {
 	format fn (data voidptr, wl_shm &C.wl_shm, format u32)
 }
 
-@[inline]
 fn C.wl_shm_add_listener(wl_shm &C.wl_shm, listener &C.wl_shm_listener, data voidptr) int
 
 const wl_shm_create_pool = 0
@@ -476,22 +398,11 @@ const wl_shm_format_since_version = 1
 const wl_shm_create_pool_since_version = 1
 const wl_shm_release_since_version = 2
 
-@[inline]
 fn C.wl_shm_set_user_data(wl_shm &C.wl_shm, user_data voidptr)
-
-@[inline]
 fn C.wl_shm_get_user_data(wl_shm &C.wl_shm) voidptr
-
-@[inline]
 fn C.wl_shm_get_version(wl_shm &C.wl_shm) u32
-
-@[inline]
 fn C.wl_shm_destroy(wl_shm &C.wl_shm)
-
-@[inline]
 fn C.wl_shm_create_pool(wl_shm &C.wl_shm, fd i32, size i32) &C.wl_shm_pool
-
-@[inline]
 fn C.wl_shm_release(wl_shm &C.wl_shm)
 
 // wl_buffer
@@ -500,7 +411,6 @@ struct C.wl_buffer_listener {
 	release fn (data voidptr, wl_buffer &C.wl_buffer)
 }
 
-@[inline]
 fn C.wl_buffer_add_listener(wl_buffer &C.wl_buffer, listener &C.wl_buffer_listener, data voidptr) int
 
 const wl_buffer_destory = 0
@@ -508,14 +418,7 @@ const wl_buffer_destory = 0
 const wl_buffer_release_since_version = 1
 const wl_buffer_destroy_since_version = 1
 
-@[inline]
 fn C.wl_buffer_set_user_data(wl_buffer &C.wl_buffer, user_data voidptr)
-
-@[inline]
 fn C.wl_buffer_get_user_data(wl_buffer &C.wl_buffer) voidptr
-
-@[inline]
 fn C.wl_buffer_get_version(wl_buffer &C.wl_buffer) u32
-
-@[inline]
 fn C.wl_buffer_destroy(wl_buffer &C.wl_buffer)
