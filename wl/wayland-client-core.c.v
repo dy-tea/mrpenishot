@@ -5,7 +5,9 @@ module wl
 #include <wayland-client-core.h>
 
 pub struct C.wl_proxy {}
+
 pub struct C.wl_display {}
+
 pub struct C.wl_event_queue {}
 
 pub const wl_marshal_flag_destroy = 1 << 0
@@ -27,7 +29,7 @@ fn C.wl_display_dispatch_queue_timeout(display &C.wl_display, queue &C.wl_event_
 fn C.wl_display_dispatch_queue_pending(display &C.wl_display, queue &C.wl_event_queue) int
 fn C.wl_display_dispatch_pending(display &C.wl_display) int
 fn C.wl_display_get_error(display &C.wl_display) int
-fn C.wl_display_get_protocol_error(display &C.wl_display, interface &&C.wl_interface, id u32) u32
+fn C.wl_display_get_protocol_error(display &C.wl_display, interface, &&C.wl_interface, id u32) u32
 fn C.wl_display_flush(display &C.wl_display) int
 fn C.wl_display_roundtrip_queue(display &C.wl_display, queue &C.wl_event_queue) int
 fn C.wl_display_roundtrip(display &C.wl_display) int

@@ -33,7 +33,7 @@ fn get_pixman_format(wl_fmt wl.Wl_shm_format) px.Pixman_format_code_t {
 			px.Pixman_format_code_t.x8b8g8r8
 		}
 		else {
-			panic("Unsupported format")
+			panic('Unsupported format')
 		}
 	}
 }

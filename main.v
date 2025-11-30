@@ -12,11 +12,37 @@ fn handle_global(mut state State, registry &C.wl_registry, name u32, interface_ 
 			shm := C.wl_registry_bind(registry, name, &C.wl_shm_interface, 1)
 			state.shm = shm
 		}
+		'wl_output' {
+			bind_version := math.min(version, 4)
+			output := &Output{
+				state:     state
+				wl_output: C.wl_registry_bind(registry, name, &C.wl_output_interface,
+					bind_version)
+				scale:     1
+			}
+			// C.wl_output_add_listener(output.output, &output_listener, output)
+			// add to outputs list
+		}
 		'zxdg_output_manager_v1' {
 			bind_version := math.min(version, 2)
-			output_manager := C.wl_registry_bind(registry, name, &C.zxdg_output_manager_v1_interface,
+			manager := C.wl_registry_bind(registry, name, &C.zxdg_output_manager_v1_interface,
 				bind_version)
-			state.zxdg_output_manager_v1 = output_manager
+			state.zxdg_output_manager_v1 = manager
+		}
+		'ext_output_image_capture_source_manager_v1' {
+			manager := C.wl_registry_bind(registry, name, &C.ext_output_image_capture_source_manager_v1_interface,
+				1)
+			state.ext_output_image_capture_source_manager_v1 = manager
+		}
+		'ext_foreign_toplevel_image_capture_source_manager_v1' {
+			manager := C.wl_registry_bind(registry, name, &C.ext_foreign_toplevel_image_capture_source_manager_v1_interface,
+				1)
+			state.ext_foreign_toplevel_image_capture_source_manager_v1 = manager
+		}
+		'ext_image_copy_capture_manager_v1' {
+			manager := C.wl_registry_bind(registry, name, &C.ext_image_copy_capture_manager_v1_interface,
+				1)
+			state.ext_image_copy_capture_manager_v1 = manager
 		}
 		else {
 			// println(interface_name)

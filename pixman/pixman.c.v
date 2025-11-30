@@ -678,7 +678,7 @@ pub enum Pixman_kernel_t {
 	lanczos3_stretched
 }
 
-fn C.pixman_filter_create_seperable_convolution(n_values &int, scale_x C.pixman_fixed_t, scale_y C.pixman_fixed_t, repub construct_x C.pixman_kernel_t, reconstruct_y C.pixman_kernel_t, sample_x C.pixman_kernel_t, sample_y C.pixman_kernel_t, subsample_bits_x int, subsample_bits_y int) &C.pixman_fixed_t
+fn C.pixman_filter_create_seperable_convolution(n_values &int, scale_x C.pixman_fixed_t, scale_y C.pixman_fixed_t, repub construct_x, C.pixman_kernel_t, reconstruct_y C.pixman_kernel_t, sample_x C.pixman_kernel_t, sample_y C.pixman_kernel_t, subsample_bits_x int, subsample_bits_y int) &C.pixman_fixed_t
 fn C.pixman_image_fill_rectangles(op Pixman_op_t, image &C.pixman_image_t, color C.pixman_color_t, n_rects int, rects &C.pixman_rectangle_t) C.pixman_bool_t
 fn C.pixman_image_fill_boxes(op Pixman_op_t, dest &C.pixman_image_t, color C.pixman_color_t, n_boxes int, boxes &C.pixman_box32_t) C.pixman_bool_t
 

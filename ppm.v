@@ -13,17 +13,15 @@ fn write_to_ppm(image &C.pixman_image_t, path string) {
 
 	format := C.pixman_image_get_format(image)
 	if format !in [.a8r8g8b8, .x8r8g8b8] {
-		panic("Unsupported format")
+		panic('Unsupported format')
 	}
 
 	pixels := C.pixman_image_get_data(image)
-	for i in 0..height*width {
-		p := unsafe {pixels[i]}
+	for i in 0 .. height * width {
+		p := unsafe { pixels[i] }
 		buffer << [u8(p << 16) & 0xff, u8(p >> 8) & 0xff, u8(p) & 0xff]
 	}
 
 	buffer.prepend(header.bytes())
-	os.write_bytes(path, buffer) or {
-		panic("Failed to write to file ${path}")
-	}
+	os.write_bytes(path, buffer) or { panic('Failed to write to file ${path}') }
 }
