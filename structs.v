@@ -15,7 +15,8 @@ mut:
 	shm                                                  ?&wlp.WlShm
 	zxdg_output_manager_v1                               ?&xo.ZxdgOutputManagerV1
 	ext_output_image_capture_source_manager_v1           ?&cs.ExtOutputImageCaptureSourceManagerV1
-	ext_foreign_toplevel_image_capture_source_manager_v1 ?&ft.ExtForeignToplevelListV1
+	ext_foreign_toplevel_image_capture_source_manager_v1 ?&cs.ExtForeignToplevelImageCaptureSourceManagerV1
+	ext_foreign_toplevel_list_v1                         ?&ft.ExtForeignToplevelListV1
 	ext_image_copy_capture_manager_v1                    ?&cc.ExtImageCopyCaptureManagerV1
 }
 
