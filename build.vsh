@@ -31,26 +31,30 @@ fn pkg_installed(name string, version ?f64) {
 	}
 }
 
-source_dir := './src'
-include_dir := './include'
+protocols_dir := './protocols'
+vscanner_dir := './vscanner'
 
 if arguments().contains('clean') {
-	cmd := 'rm -rf ${source_dir} ${include_dir}'
+	cmd := 'rm -r ${protocols_dir}/*/'
 	execute(cmd)
 	println('❯ ${cmd}')
 	return
 }
 
-program_installed('wayland-scanner')
 program_installed('pkg-config')
 
 pkg_installed('wayland-protocols', 1.37)
 pkg_installed('wayland-client', none)
 pkg_installed('pixman-1', none)
 
+// build vscanner
+sh('v ${vscanner_dir}')
+
+wl_dir := sh('pkg-config --variable=pkgdatadir wayland-client').trim_space()
 wl_proto_dir := sh('pkg-config --variable=pkgdatadir wayland-protocols').trim_space()
 
 protocols := [
+	wl_dir + '/wayland.xml',
 	'./protocols/wlr-screencopy-unstable-v1.xml',
 	wl_proto_dir + '/staging/ext-image-capture-source/ext-image-capture-source-v1.xml',
 	wl_proto_dir + '/staging/ext-image-copy-capture/ext-image-copy-capture-v1.xml',
@@ -58,11 +62,9 @@ protocols := [
 	wl_proto_dir + '/unstable/xdg-output/xdg-output-unstable-v1.xml',
 ]
 
-sh('mkdir -p ${source_dir}')
-sh('mkdir -p ${include_dir}')
+sh('mkdir -p ${protocols_dir}')
 
 for protocol in protocols {
-	name := base(protocol).replace('.xml', '-protocol')
-	sh('wayland-scanner public-code ${protocol} ${source_dir}/${name}.c')
-	sh('wayland-scanner client-header ${protocol} ${include_dir}/${name}.h')
+	name := base(protocol).replace('.xml', '').replace('-', '_')
+	sh('${vscanner_dir}/vscanner ${protocol} ${protocols_dir}/${name}')
 }

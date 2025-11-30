@@ -1,6 +1,5 @@
 module main
 
-import pixman
 import os
 
 fn write_to_ppm(image &C.pixman_image_t, path string) {

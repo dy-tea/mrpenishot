@@ -1,12 +1,9 @@
 module main
 
-import wl
+import protocols.wayland as wlp
 import pixman as px
 
-#flag -I./include
-#include "wlr-screencopy-unstable-v1-protocol.h"
-
-fn get_pixman_format(wl_fmt wl.Wl_shm_format) px.Pixman_format_code_t {
+fn get_pixman_format(wl_fmt wlp.WlShm_Format) px.Pixman_format_code_t {
 	return match wl_fmt {
 		.argb8888 {
 			px.Pixman_format_code_t.b8g8r8a8

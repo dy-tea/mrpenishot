@@ -1,7 +1,7 @@
 module main
 
-import wl
 import os
+import protocols.wayland as wlp
 
 #flag -I/usr/include
 #include <sys/mman.h>
@@ -11,16 +11,17 @@ fn C.munmap(__addr voidptr, __len usize) int
 
 @[heap]
 struct Buffer {
-	wl_buffer &C.wl_buffer
+mut:
+	wl_buffer &wlp.WlBuffer
 	data      voidptr
 	width     i32
 	height    i32
 	stride    i32
 	size      usize
-	format    wl.Wl_shm_format
+	format    wlp.WlShm_Format
 }
 
-fn Buffer.new(shm &C.wl_shm, format wl.Wl_shm_format, width i32, height i32, stride i32) &Buffer {
+fn Buffer.new(mut shm wlp.WlShm, format wlp.WlShm_Format, width i32, height i32, stride i32) &Buffer {
 	size := stride * height
 
 	fd := 1 // TODO
@@ -35,9 +36,9 @@ fn Buffer.new(shm &C.wl_shm, format wl.Wl_shm_format, width i32, height i32, str
 		panic('Failed to map buffer')
 	}
 
-	pool := C.wl_shm_create_pool(shm, fd, size)
-	buffer := C.wl_shm_pool_create_buffer(pool, 0, width, height, stride, u32(format))
-	C.wl_shm_pool_destroy(pool)
+	mut pool := shm.create_pool(fd, size)
+	buffer := pool.create_buffer(0, width, height, stride, u32(format))
+	pool.destroy()
 
 	os.fd_close(fd)
 
@@ -52,8 +53,8 @@ fn Buffer.new(shm &C.wl_shm, format wl.Wl_shm_format, width i32, height i32, str
 	}
 }
 
-fn (b Buffer) destroy() {
+fn (mut b Buffer) destroy() {
 	C.munmap(b.data, b.size)
-	C.wl_buffer_destroy(b.wl_buffer)
+	b.wl_buffer.destroy()
 	// free(b)
 }
