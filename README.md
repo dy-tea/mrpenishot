@@ -20,3 +20,6 @@ v .              # build
 ### NOTE
 
 This project is very unfinished, it currently only takes a screenshot of your entire screen and only PPM images are supported.
+
+### References
+- [grim](https://gitlab.freedesktop.org/emersion/grim)
