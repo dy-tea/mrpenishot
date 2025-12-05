@@ -61,7 +61,6 @@ fn session_handle_done(mut capture Capture, session &cc.ExtImageCopyCaptureSessi
 	capture.buffer = Buffer.new(mut shm, shm_format, int(capture.buffer_width), int(capture.buffer_height),
 		int(stride))
 
-	// Use session from capture struct instead of callback parameter to avoid proxy issues
 	mut sess := capture.ext_image_copy_capture_session_v1 or { return }
 	mut frame := sess.create_frame()
 	capture.ext_image_copy_capture_frame_v1 = frame
@@ -272,11 +271,12 @@ fn main() {
 		}
 	}
 
+	mut geometry := Geometry{} // TODO: grab geometry from somewhere
 	mut scale := 1.0
 	for output in state.outputs {
-		// if !geometry.intersects(output.logical_geometry) {
-		//	continue
-		//}
+		if geometry != Geometry{} && !geometry.intersects(output.logical_geometry) {
+			continue
+		}
 		if output.logical_scale > scale {
 			scale = output.logical_scale
 		}
@@ -291,7 +291,9 @@ fn main() {
 		done = state.n_done == state.captures.len
 	}
 
-	geometry := state.get_extents()
+	if geometry == Geometry{0,0,0,0} {
+		geometry = state.get_extents()
+	}
 	image := render(&state, geometry, scale) or { panic(err) }
 
 	write_to_ppm(image, 'out.ppm')
