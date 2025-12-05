@@ -296,7 +296,30 @@ fn main() {
 
 	write_to_ppm(image, 'out.ppm')
 
+	// destroy
 	C.pixman_image_unref(image)
-
+	for mut capture in state.captures {
+		if mut frame := capture.ext_image_copy_capture_frame_v1 {
+			frame.destroy()
+		}
+		if mut session := capture.ext_image_copy_capture_session_v1 {
+			session.destroy()
+		}
+		if mut buffer := capture.buffer {
+			buffer.destroy()
+		}
+	}
+	if mut manager := state.ext_foreign_toplevel_list_v1 {
+		manager.destroy()
+	}
+	if mut manager := state.ext_output_image_capture_source_manager_v1 {
+		manager.destroy()
+	}
+	if mut manager := state.ext_image_copy_capture_manager_v1 {
+		manager.destroy()
+	}
+	if mut manager := state.zxdg_output_manager_v1 {
+		manager.destroy()
+	}
 	C.wl_display_disconnect(display_proxy)
 }
