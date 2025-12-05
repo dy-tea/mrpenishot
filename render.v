@@ -30,6 +30,18 @@ fn get_pixman_format(wl_fmt wlp.WlShm_Format) !px.Pixman_format_code_t {
 		.rgbx8888 {
 			px.Pixman_format_code_t.x8b8g8r8
 		}
+		.argb2101010 {
+			px.Pixman_format_code_t.a2r10g10b10
+		}
+		.xrgb2101010 {
+			px.Pixman_format_code_t.x2r10g10b10
+		}
+		.abgr2101010 {
+			px.Pixman_format_code_t.a2b10g10r10
+		}
+		.xbgr2101010 {
+			px.Pixman_format_code_t.x2b10g10r10
+		}
 		else {
 			error('Unsupported format')
 		}

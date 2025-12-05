@@ -28,7 +28,7 @@ mut:
 	ext_image_copy_capture_manager_v1                    ?&cc.ExtImageCopyCaptureManagerV1
 
 	outputs  []Output
-	captures []Capture
+	captures []&Capture
 	n_done   int
 }
 

@@ -46,12 +46,12 @@ fn session_handle_shm_format(mut capture Capture, session &cc.ExtImageCopyCaptur
 	if capture.shm_format != none {
 		return
 	}
-	_ := get_pixman_format(fmt) or { return }
+	get_pixman_format(fmt) or { return }
 	capture.shm_format = fmt
 }
 
-fn session_handle_done(mut capture Capture, mut session cc.ExtImageCopyCaptureSessionV1) {
-	if capture.ext_image_copy_capture_frame_v1 == none {
+fn session_handle_done(mut capture Capture, session &cc.ExtImageCopyCaptureSessionV1) {
+	if capture.ext_image_copy_capture_frame_v1 != none {
 		return
 	}
 	shm_format := capture.shm_format or { panic('no supported shm format found') }
@@ -61,12 +61,14 @@ fn session_handle_done(mut capture Capture, mut session cc.ExtImageCopyCaptureSe
 	capture.buffer = Buffer.new(mut shm, shm_format, int(capture.buffer_width), int(capture.buffer_height),
 		int(stride))
 
-	mut frame := session.create_frame()
+	// Use session from capture struct instead of callback parameter to avoid proxy issues
+	mut sess := capture.ext_image_copy_capture_session_v1 or { return }
+	mut frame := sess.create_frame()
 	capture.ext_image_copy_capture_frame_v1 = frame
-	frame.add_listener(&frame_listener, &capture)
+	frame.add_listener(&frame_listener, capture)
 
 	mut buffer := capture.buffer or { return }
-	frame.attach_buffer(buffer.wl_buffer)
+	frame.attach_buffer(buffer.wl_buffer.proxy)
 	i32_max := math.maxof[i32]()
 	frame.damage_buffer(0, 0, i32_max, i32_max)
 	frame.capture()
@@ -75,8 +77,8 @@ fn session_handle_done(mut capture Capture, mut session cc.ExtImageCopyCaptureSe
 const session_listener = C.ext_image_copy_capture_session_v1_listener{
 	buffer_size:   session_handle_buffer_size
 	shm_format:    session_handle_shm_format
-	dmabuf_device: fn (_ voidptr, _ voidptr, _ &C.wl_array) {}
-	dmabuf_format: fn (_ voidptr, _ voidptr, _ u32, _ &C.wl_array) {}
+	dmabuf_device: fn (_ voidptr, _ voidptr, _ voidptr) {}
+	dmabuf_format: fn (_ voidptr, _ voidptr, _ u32, _ voidptr) {}
 	done:          session_handle_done
 	stopped:       fn (_ voidptr, _ voidptr) {}
 }
@@ -290,7 +292,6 @@ fn main() {
 	}
 
 	geometry := state.get_extents()
-
 	image := render(&state, geometry, scale) or { panic(err) }
 
 	write_to_ppm(image, 'out.ppm')

@@ -18,7 +18,7 @@ fn write_to_ppm(image &C.pixman_image_t, path string) {
 	pixels := C.pixman_image_get_data(image)
 	for i in 0 .. height * width {
 		p := unsafe { pixels[i] }
-		buffer << [u8(p << 16) & 0xff, u8(p >> 8) & 0xff, u8(p) & 0xff]
+		buffer << [u8(p >> 16) & 0xff, u8(p >> 8) & 0xff, u8(p) & 0xff]
 	}
 
 	buffer.prepend(header.bytes())
