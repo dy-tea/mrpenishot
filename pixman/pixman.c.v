@@ -1,12 +1,18 @@
 module pixman
 
-#flag linux -I/usr/include
-#define PIXMAN_H__
-#include <pixman-1/pixman.h>
+#flag linux -I/usr/include/pixman-1
+#include <pixman.h>
+#flag linux -L/usr/lib
+#flag linux -lpixman-1
 
 // boolean
 
 pub type C.pixman_bool_t = bool
+
+// standard integer types
+
+pub type C.int32_t = i32
+pub type C.uint32_t = u32
 
 // fixed point numbers
 
@@ -106,7 +112,7 @@ pub struct C.pixman_transform {
 }
 
 @[typedef]
-pub union C.pixman_image {}
+pub struct C.pixman_image {}
 
 pub type C.pixman_image_t = C.pixman_image
 
@@ -136,6 +142,13 @@ pub struct C.pixman_f_vector {
 pub struct C.pixman_f_transform {
 	m [3][3]f64
 }
+
+fn C.pixman_f_transform_init_identity(t &C.pixman_f_transform)
+fn C.pixman_f_transform_translate(forward &C.pixman_f_transform, reverse &C.pixman_f_transform, tx f64, ty f64) C.pixman_bool_t
+fn C.pixman_f_transform_scale(forward &C.pixman_f_transform, reverse &C.pixman_f_transform, sx f64, sy f64) C.pixman_bool_t
+fn C.pixman_f_transform_rotate(forward &C.pixman_f_transform, reverse &C.pixman_f_transform, c f64, s f64) C.pixman_bool_t
+fn C.pixman_f_transform_invert(dst &C.pixman_f_transform, src &C.pixman_f_transform) C.pixman_bool_t
+fn C.pixman_transform_from_pixman_f_transform(t &C.pixman_transform, ft &C.pixman_f_transform) C.pixman_bool_t
 
 // TODO: fixed point fns
 
@@ -541,85 +554,87 @@ pub fn pixman_format_color(f int) bool {
 		|| pixman_format_type(f) == pixman_type_rgba_float
 }
 
+@[_allow_multiple_values]
 pub enum Pixman_format_code_t {
 	// 128bpp formats
-	rgba_float = int(pixman_format_byte(128, pixman_type_rgba_float, 32, 32, 32, 32))
+	rgba_float = 0x10cb4444
+
 	// 96bpp formats
-	rgb_float = int(pixman_format_byte(96, pixman_type_rgba_float, 0, 32, 32, 32))
+	rgb_float = 0x0ccb0444
 
 	// 64bpp formats
 	//[63:0] A:B:G:R 16:16:16:16 native endian
-	a16b16g16r16 = int(pixman_format_byte(64, pixman_type_abgr, 16, 16, 16, 16))
+	a16b16g16r16 = 0x08c32222
 
 	// 32bpp formats
-	a8r8g8b8    = int(pixman_format(32, pixman_type_argb, 8, 8, 8, 8))
-	x8r8g8b8    = int(pixman_format(32, pixman_type_argb, 0, 8, 8, 8))
-	a8b8g8r8    = int(pixman_format(32, pixman_type_abgr, 8, 8, 8, 8))
-	x8b8g8r8    = int(pixman_format(32, pixman_type_abgr, 0, 8, 8, 8))
-	b8g8r8a8    = int(pixman_format(32, pixman_type_bgra, 8, 8, 8, 8))
-	b8g8r8x8    = int(pixman_format(32, pixman_type_bgra, 0, 8, 8, 8))
-	r8g8b8a8    = int(pixman_format(32, pixman_type_rgba, 8, 8, 8, 8))
-	r8g8b8x8    = int(pixman_format(32, pixman_type_rgba, 0, 8, 8, 8))
-	x14r6g6b6   = int(pixman_format(32, pixman_type_argb, 0, 6, 6, 6))
-	x2r10g10b10 = int(pixman_format(32, pixman_type_argb, 0, 10, 10, 10))
-	a2r10g10b10 = int(pixman_format(32, pixman_type_argb, 2, 10, 10, 10))
-	x2b10g10r10 = int(pixman_format(32, pixman_type_abgr, 0, 10, 10, 10))
-	a2b10g10r10 = int(pixman_format(32, pixman_type_abgr, 2, 10, 10, 10))
+	a8r8g8b8    = 0x20028888
+	x8r8g8b8    = 0x20020888
+	a8b8g8r8    = 0x20038888
+	x8b8g8r8    = 0x20030888
+	b8g8r8a8    = 0x20088888
+	b8g8r8x8    = 0x20080888
+	r8g8b8a8    = 0x20098888
+	r8g8b8x8    = 0x20090888
+	x14r6g6b6   = 0x20020666
+	x2r10g10b10 = 0x20020aaa
+	a2r10g10b10 = 0x20022aaa
+	x2b10g10r10 = 0x20030aaa
+	a2b10g10r10 = 0x20032aaa
 
 	// sRGB formats
-	a8r8g8b8_srgb = int(pixman_format(32, pixman_type_argb_srgb, 8, 8, 8, 8))
-	r8g8b8_srgb   = int(pixman_format(24, pixman_type_argb_srgb, 0, 8, 8, 8))
+	a8r8g8b8_srgb = 0x200a8888
+	r8g8b8_srgb   = 0x180a0888
 
 	// 24bpp formats
-	r8g8b8 = int(pixman_format(24, pixman_type_argb, 0, 8, 8, 8))
-	b8g8r8 = int(pixman_format(24, pixman_type_abgr, 0, 8, 8, 8))
+	r8g8b8 = 0x18020888
+	b8g8r8 = 0x18030888
 
 	// 16bpp formats
-	r5g6b5 = int(pixman_format(16, pixman_type_argb, 0, 5, 6, 5))
-	b5g6r5 = int(pixman_format(16, pixman_type_abgr, 0, 5, 6, 5))
+	r5g6b5 = 0x10020565
+	b5g6r5 = 0x10030565
 
-	a1r5g5b5 = int(pixman_format(16, pixman_type_argb, 1, 5, 5, 5))
-	x1r5g5b5 = int(pixman_format(16, pixman_type_argb, 0, 5, 5, 5))
-	a1b5g5r5 = int(pixman_format(16, pixman_type_abgr, 1, 5, 5, 5))
-	x1b5g5r5 = int(pixman_format(16, pixman_type_abgr, 0, 5, 5, 5))
-	a4r4g4b4 = int(pixman_format(16, pixman_type_argb, 4, 4, 4, 4))
-	x4r4g4b4 = int(pixman_format(16, pixman_type_argb, 0, 4, 4, 4))
-	a4b4g4r4 = int(pixman_format(16, pixman_type_abgr, 4, 4, 4, 4))
-	x4b4g4r4 = int(pixman_format(16, pixman_type_abgr, 0, 4, 4, 4))
+	a1r5g5b5 = 0x10021555
+	x1r5g5b5 = 0x10020555
+	a1b5g5r5 = 0x10031555
+	x1b5g5r5 = 0x10030555
+	a4r4g4b4 = 0x10024444
+	x4r4g4b4 = 0x10020444
+	a4b4g4r4 = 0x10034444
+	x4b4g4r4 = 0x10030444
 
 	// 8bpp formats
-	a8       = int(pixman_format(8, pixman_type_a, 8, 0, 0, 0))
-	r3g3b2   = int(pixman_format(8, pixman_type_argb, 0, 3, 3, 2))
-	b2g3r3   = int(pixman_format(8, pixman_type_abgr, 0, 3, 3, 2))
-	a2r2g2b2 = int(pixman_format(8, pixman_type_argb, 2, 2, 2, 2))
-	a2b2g2r2 = int(pixman_format(8, pixman_type_abgr, 2, 2, 2, 2))
+	a8       = 0x08018000
+	r3g3b2   = 0x08020332
+	b2g3r3   = 0x08030332
+	a2r2g2b2 = 0x08022222
+	a2b2g2r2 = 0x08032222
 
-	c8 = int(pixman_format(8, pixman_type_color, 0, 0, 0, 0))
-	g8 = int(pixman_format(8, pixman_type_gray, 0, 0, 0, 0))
+	c8 = 0x08040000
+	g8 = 0x08050000
 
-	x4a4 = int(pixman_format(8, pixman_type_a, 4, 0, 0, 0))
+	x4a4 = 0x08014000
 
-	x4c4 = int(pixman_format(8, pixman_type_color, 0, 0, 0, 0))
-	x4g4 = int(pixman_format(8, pixman_type_gray, 0, 0, 0, 0))
+	x4c4 = 0x08040000
+	x4g4 = 0x08050000
 
 	// 4bpp formats
-	a4       = int(pixman_format(4, pixman_type_a, 4, 0, 0, 0))
-	r1g2b1   = int(pixman_format(4, pixman_type_argb, 0, 1, 2, 1))
-	b1g2r1   = int(pixman_format(4, pixman_type_abgr, 0, 1, 2, 1))
-	a1r1g1b1 = int(pixman_format(4, pixman_type_argb, 1, 1, 1, 1))
-	a1b1g1r1 = int(pixman_format(4, pixman_type_abgr, 1, 1, 1, 1))
+	a4       = 0x04014000
+	r1g2b1   = 0x04020121
+	b1g2r1   = 0x04030121
+	a1r1g1b1 = 0x04021111
+	a1b1g1r1 = 0x04031111
 
-	c4 = int(pixman_format(4, pixman_type_color, 0, 0, 0, 0))
-	g4 = int(pixman_format(4, pixman_type_gray, 0, 0, 0, 0))
+	c4 = 0x04040000
+	g4 = 0x04050000
 
 	// 1bpp formats
-	a1 = int(pixman_format(1, pixman_type_a, 1, 0, 0, 0))
+	a1 = 0x01011000
 
-	g1 = int(pixman_format(1, pixman_type_gray, 0, 0, 0, 0))
+	g1 = 0x01050000
 
 	// YUV formats
-	yuy2 = int(pixman_format(16, pixman_type_yuy2, 0, 0, 0, 0))
-	yv12 = int(pixman_format(12, pixman_type_yv12, 0, 0, 0, 0))
+	yuy2 = 0x10060000
+	yv12 = 0x0c070000
 }
 
 // querying supported format values
@@ -678,7 +693,7 @@ pub enum Pixman_kernel_t {
 	lanczos3_stretched
 }
 
-fn C.pixman_filter_create_seperable_convolution(n_values &int, scale_x C.pixman_fixed_t, scale_y C.pixman_fixed_t, repub construct_x, C.pixman_kernel_t, reconstruct_y C.pixman_kernel_t, sample_x C.pixman_kernel_t, sample_y C.pixman_kernel_t, subsample_bits_x int, subsample_bits_y int) &C.pixman_fixed_t
+fn C.pixman_filter_create_separable_convolution(n_values &int, scale_x C.pixman_fixed_t, scale_y C.pixman_fixed_t, reconstruct_x Pixman_kernel_t, reconstruct_y Pixman_kernel_t, sample_x Pixman_kernel_t, sample_y Pixman_kernel_t, subsample_bits_x int, subsample_bits_y int) &C.pixman_fixed_t
 fn C.pixman_image_fill_rectangles(op Pixman_op_t, image &C.pixman_image_t, color C.pixman_color_t, n_rects int, rects &C.pixman_rectangle_t) C.pixman_bool_t
 fn C.pixman_image_fill_boxes(op Pixman_op_t, dest &C.pixman_image_t, color C.pixman_color_t, n_boxes int, boxes &C.pixman_box32_t) C.pixman_bool_t
 
@@ -686,7 +701,7 @@ fn C.pixman_image_fill_boxes(op Pixman_op_t, dest &C.pixman_image_t, color C.pix
 
 fn C.pixman_compute_composite_region(region &C.pixman_region16_t, src_image &C.pixman_image_t, mask_image &C.pixman_image_t, dest_image &C.pixman_image_t, src_x int16_t, src_y int16_t, mask_x int16_t, mask_y int16_t, dest_x int16_t, dest_y int16_t, width uint16_t, height uint16_t) C.pixman_bool_t
 fn C.pixman_image_composite(op Pixman_op_t, src &C.pixman_image_t, mask &C.pixman_image_t, dest &C.pixman_image_t, src_x int16_t, src_y int16_t, mask_x int16_t, mask_y int16_t, dest_x int16_t, dest_y int16_t, width uint16_t, height uint16_t) C.pixman_bool_t
-fn C.pixman_image_composite32(op Pixman_op_t, src &C.pixman_image_t, mask &C.pixman_image_t, dest &C.pixman_image_t, src_x int32_t, src_y int32_t, mask_x int32_t, mask_y int32_t, dest_x int32_t, dest_y int32_t, width uint32_t, height uint32_t) C.pixman_bool_t
+fn C.pixman_image_composite32(op Pixman_op_t, src &C.pixman_image_t, mask &C.pixman_image_t, dest &C.pixman_image_t, src_x i32, src_y i32, mask_x i32, mask_y i32, dest_x i32, dest_y i32, width u32, height u32) C.pixman_bool_t
 fn C.pixman_image_composite64(op Pixman_op_t, src &C.pixman_image_t, mask &C.pixman_image_t, dest &C.pixman_image_t, src_x int64_t, src_y int64_t, mask_x int64_t, mask_y int64_t, dest_x int64_t, dest_y int64_t, width uint64_t, height uint64_t) C.pixman_bool_t
 
 // glyphs

@@ -11,19 +11,114 @@ import protocols.ext_foreign_toplevel_list_v1 as ft
 #include <wayland-client.h>
 #include <wayland-client-protocol.h>
 
+fn frame_handle_transform(mut capture Capture, frame &cc.ExtImageCopyCaptureFrameV1, transform u32) {
+	capture.transform = unsafe { wlp.WlOutput_Transform(transform) }
+}
+
+fn frame_handle_ready(mut capture Capture, frame &cc.ExtImageCopyCaptureFrameV1) {
+	capture.state.n_done++
+}
+
+fn frame_handle_failed(capture &Capture, frame &cc.ExtImageCopyCaptureFrameV1, reason u32) {
+	name := if output := capture.output { output.name } else { 'unknown' }
+	panic('failed to copy output ${name}, reason: ${reason}')
+}
+
+const frame_listener = C.ext_image_copy_capture_frame_v1_listener{
+	transform:         frame_handle_transform
+	damage:            fn (_ voidptr, _ voidptr, _ int, _ int, _ int, _ int) {}
+	presentation_time: fn (_ voidptr, _ voidptr, _ u32, _ u32, _ u32) {}
+	ready:             frame_handle_ready
+	failed:            frame_handle_failed
+}
+
+fn session_handle_buffer_size(mut capture Capture, session &cc.ExtImageCopyCaptureSessionV1, width u32, height u32) {
+	capture.buffer_width = width
+	capture.buffer_height = height
+	if capture.output == none {
+		capture.logical_geometry.width = int(width)
+		capture.logical_geometry.height = int(height)
+	}
+}
+
+fn session_handle_shm_format(mut capture Capture, session &cc.ExtImageCopyCaptureSessionV1, format u32) {
+	fmt := unsafe { wlp.WlShm_Format(format) }
+	if capture.shm_format != none {
+		return
+	}
+	_ := get_pixman_format(fmt) or { return }
+	capture.shm_format = fmt
+}
+
+fn session_handle_done(mut capture Capture, mut session cc.ExtImageCopyCaptureSessionV1) {
+	if capture.ext_image_copy_capture_frame_v1 == none {
+		return
+	}
+	shm_format := capture.shm_format or { panic('no supported shm format found') }
+	mut shm := capture.state.shm or { return }
+
+	stride := get_min_stride(shm_format, capture.buffer_width)
+	capture.buffer = Buffer.new(mut shm, shm_format, int(capture.buffer_width), int(capture.buffer_height),
+		int(stride))
+
+	mut frame := session.create_frame()
+	capture.ext_image_copy_capture_frame_v1 = frame
+	frame.add_listener(&frame_listener, &capture)
+
+	mut buffer := capture.buffer or { return }
+	frame.attach_buffer(buffer.wl_buffer)
+	i32_max := math.maxof[i32]()
+	frame.damage_buffer(0, 0, i32_max, i32_max)
+	frame.capture()
+}
+
+const session_listener = C.ext_image_copy_capture_session_v1_listener{
+	buffer_size:   session_handle_buffer_size
+	shm_format:    session_handle_shm_format
+	dmabuf_device: fn (_ voidptr, _ voidptr, _ &C.wl_array) {}
+	dmabuf_format: fn (_ voidptr, _ voidptr, _ u32, _ &C.wl_array) {}
+	done:          session_handle_done
+	stopped:       fn (_ voidptr, _ voidptr) {}
+}
+
+fn (mut state State) capture_output(output &Output, include_cursor bool) {
+	mut capture := &Capture{
+		state:            &state
+		output:           output
+		transform:        output.transform
+		logical_geometry: output.logical_geometry
+	}
+	state.captures << capture
+
+	options := if include_cursor {
+		u32(cc.ExtImageCopyCaptureManagerV1_Options.paint_cursors)
+	} else {
+		0
+	}
+	if mut source_manager := state.ext_output_image_capture_source_manager_v1 {
+		mut source := source_manager.create_source(output.wl_output.proxy)
+		if mut session_manager := state.ext_image_copy_capture_manager_v1 {
+			mut session := session_manager.create_session(source.proxy, options)
+			capture.ext_image_copy_capture_session_v1 = session
+			session.add_listener(&session_listener, capture)
+		}
+		source.destroy()
+	}
+}
+
 fn xdg_output_handle_logical_position(mut output Output, _ &xo.ZxdgOutputV1, x int, y int) {
-	output.logical_x = x
-	output.logical_y = y
+	output.logical_geometry.x = x
+	output.logical_geometry.y = y
 }
 
 fn xdg_output_handle_logical_size(mut output Output, _ &xo.ZxdgOutputV1, width int, height int) {
-	output.logical_width = width
-	output.logical_height = height
+	output.logical_geometry.width = width
+	output.logical_geometry.height = height
 }
 
 fn xdg_output_handle_done(mut output Output, _ &xo.ZxdgOutputV1) {
 	width, _ := transform_output(output.transform, output.mode_width, output.mode_height)
-	output.logical_scale = f64(width) / output.logical_width
+	output.logical_scale = f64(width) / output.logical_geometry.width
 }
 
 fn xdg_output_handle_name(mut output Output, _ &xo.ZxdgOutputV1, name &char) {
@@ -174,6 +269,33 @@ fn main() {
 			panic('wl_display_roundtrip failed')
 		}
 	}
+
+	mut scale := 1.0
+	for output in state.outputs {
+		// if !geometry.intersects(output.logical_geometry) {
+		//	continue
+		//}
+		if output.logical_scale > scale {
+			scale = output.logical_scale
+		}
+		state.capture_output(output, true)
+	}
+	if state.captures.len == 0 {
+		panic('no captures found')
+	}
+
+	mut done := false
+	for !done && C.wl_display_dispatch(display_proxy) != -1 {
+		done = state.n_done == state.captures.len
+	}
+
+	geometry := state.get_extents()
+
+	image := render(&state, geometry, scale) or { panic(err) }
+
+	write_to_ppm(image, 'out.ppm')
+
+	C.pixman_image_unref(image)
 
 	C.wl_display_disconnect(display_proxy)
 }

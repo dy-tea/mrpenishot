@@ -1,6 +1,7 @@
 module main
 
 import os
+import rand
 import protocols.wayland as wlp
 
 #flag -I/usr/include
@@ -8,23 +9,60 @@ import protocols.wayland as wlp
 
 fn C.mmap(__addr voidptr, __len usize, __prot int, __flag int, __fd int, __offset i32) voidptr
 fn C.munmap(__addr voidptr, __len usize) int
+fn C.shm_open(__name &char, __oflag int, __mode u32) int
+fn C.shm_unlink(__name &char) int
+
+fn open_shm() int {
+	base := '/mrpenishot-'
+	mut retries := 100
+
+	for {
+		retries--
+
+		name := base + rand.i8().str()
+		fd := C.shm_open(name.str, C.O_RDWR | C.O_CREAT | C.O_EXCL, 600)
+		if fd >= 0 {
+			C.shm_unlink(name.str)
+			return fd
+		}
+
+		if retries == 0 {
+			break
+		}
+	}
+	return -1
+}
+
+fn create_shm_file(size u64) int {
+	fd := open_shm()
+	if fd < 0 {
+		return fd
+	}
+
+	if C.ftruncate(fd, size) < 0 {
+		C.close(fd)
+		return -1
+	}
+
+	return fd
+}
 
 @[heap]
 struct Buffer {
 mut:
-	wl_buffer &wlp.WlBuffer
-	data      voidptr
-	width     i32
-	height    i32
-	stride    i32
-	size      usize
-	format    wlp.WlShm_Format
+	wl_buffer  &wlp.WlBuffer
+	data       voidptr
+	width      i32
+	height     i32
+	stride     i32
+	size       usize
+	shm_format wlp.WlShm_Format
 }
 
 fn Buffer.new(mut shm wlp.WlShm, format wlp.WlShm_Format, width i32, height i32, stride i32) &Buffer {
 	size := stride * height
 
-	fd := 1 // TODO
+	fd := create_shm_file(u64(size))
 	if fd == -1 {
 		panic('Failed to create buffer')
 	}
@@ -43,13 +81,13 @@ fn Buffer.new(mut shm wlp.WlShm, format wlp.WlShm_Format, width i32, height i32,
 	os.fd_close(fd)
 
 	return &Buffer{
-		wl_buffer: buffer
-		data:      data
-		width:     width
-		height:    height
-		stride:    stride
-		size:      usize(size)
-		format:    format
+		wl_buffer:  buffer
+		data:       data
+		width:      width
+		height:     height
+		stride:     stride
+		size:       usize(size)
+		shm_format: format
 	}
 }
 
