@@ -67,4 +67,13 @@ sh('mkdir -p ${protocols_dir}')
 for protocol in protocols {
 	name := base(protocol).replace('.xml', '').replace('-', '_')
 	sh('${vscanner_dir}/vscanner ${protocol} ${protocols_dir}/${name}')
+
+	// Generate C protocol files for non-core protocols
+	if !protocol.contains('wayland.xml') {
+		// Use module name (with underscores) for C files to match vscanner output
+		header_file := '${protocols_dir}/${name}/${name}-client-protocol.h'
+		code_file := '${protocols_dir}/${name}/${name}-protocol.c'
+		sh('wayland-scanner client-header ${protocol} ${header_file}')
+		sh('wayland-scanner private-code ${protocol} ${code_file}')
+	}
 }

@@ -342,45 +342,28 @@ fn generate_v_code(protocol Protocol) string {
 	out += 'module ${module_name}\n\n'
 	out += 'import wl\n\n'
 
-	is_core_wayland := protocol.name == 'wayland'
-
-	if is_core_wayland {
+	if protocol.name == 'wayland' {
 		out += '#pkgconfig wayland-client\n'
 		out += '#include <wayland-client-protocol.h>\n\n'
-
-		for iface in protocol.interfaces {
-			interface_var_name := '${iface.name}_interface'
-			out += '@[inline]\n'
-			out += 'pub fn ${interface_var_name}_ptr() voidptr {\n'
-			out += '\treturn unsafe { voidptr(&C.${interface_var_name}) }\n'
-			out += '}\n\n'
-		}
-
-		for iface in protocol.interfaces {
-			interface_var_name := '${iface.name}_interface'
-			out += 'pub const ${interface_var_name}_name = \'${iface.name}\'\n'
-		}
-		out += '\n'
 	} else {
-		for iface in protocol.interfaces {
-			out += generate_interface_constant(iface)
-			out += '\n'
-		}
-
-		for iface in protocol.interfaces {
-			interface_var_name := '${iface.name}_interface'
-			out += '@[inline]\n'
-			out += 'pub fn ${interface_var_name}_ptr() voidptr {\n'
-			out += '\treturn unsafe { voidptr(&${interface_var_name}) }\n'
-			out += '}\n\n'
-		}
-
-		for iface in protocol.interfaces {
-			interface_var_name := '${iface.name}_interface'
-			out += 'pub const ${interface_var_name}_name = \'${iface.name}\'\n'
-		}
-		out += '\n'
+		out += '#pkgconfig wayland-client\n'
+		out += '#include <wayland-client.h>\n'
+		out += '#include "${module_name}-client-protocol.h"\n'
+		out += '#flag -I @VMODROOT/protocols/${module_name}\n'
+		out += '#flag @VMODROOT/protocols/${module_name}/${module_name}-protocol.c\n\n'
 	}
+	for iface in protocol.interfaces {
+		interface_var_name := '${iface.name}_interface'
+		out += '@[inline]\n'
+		out += 'pub fn ${interface_var_name}_ptr() voidptr {\n'
+		out += '\treturn unsafe { voidptr(&C.${interface_var_name}) }\n'
+		out += '}\n\n'
+	}
+	for iface in protocol.interfaces {
+		interface_var_name := '${iface.name}_interface'
+		out += 'pub const ${interface_var_name}_name = \'${iface.name}\'\n'
+	}
+	out += '\n'
 
 	for iface in protocol.interfaces {
 		out += generate_interface(iface)
@@ -755,11 +738,11 @@ fn generate_request_method(iface Interface, request Message, opcode int) string 
 		if new_id_arg.interface_name != '' {
 			out += '\tproxy := C.wl_proxy_marshal_flags(unsafe { &C.wl_proxy(self.proxy) }, ${opcode}, '
 			out += '${new_id_arg.interface_name}_interface_ptr(), '
-			out += 'C.wl_proxy_get_version(unsafe { &C.wl_proxy(self.proxy) }), 0'
+			out += 'C.wl_proxy_get_version(unsafe { &C.wl_proxy(self.proxy) }), 0, unsafe { nil }'
 			out += if call_args.len > 0 {
-				', ${call_args.join(', ')}, unsafe { nil }'
+				', ${call_args.join(', ')}'
 			} else {
-				', unsafe { nil }'
+				''
 			}
 		} else {
 			out += '\tproxy := C.wl_proxy_marshal_flags(unsafe { &C.wl_proxy(self.proxy) }, ${opcode}, '
