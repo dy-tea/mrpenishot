@@ -1,5 +1,6 @@
 module main
 
+import qoi
 import math
 import protocols.wayland as wlp
 import protocols.xdg_output_unstable_v1 as xo
@@ -296,7 +297,7 @@ fn main() {
 	}
 	image := render(&state, geometry, scale) or { panic(err) }
 
-	write_to_ppm(image, 'out.ppm')
+	qoi.write_to_qoi(image, 'out.ppm')!
 
 	// destroy
 	C.pixman_image_unref(image)
