@@ -3,7 +3,6 @@ module qoi
 // adapted from https://github.com/418Coffee/qoi-v
 import io
 import os
-import pixman
 import encoding.binary
 
 const qoi_op_index = 0x00 // 00xxxxxx
@@ -241,33 +240,37 @@ fn write_all(data []u8, mut w io.Writer) ! {
 	}
 }
 
-// this is probably wrong, needs testing
 pub fn write_to_qoi(image &C.pixman_image_t, path string) ! {
 	width := C.pixman_image_get_width(image)
 	height := C.pixman_image_get_height(image)
 	format := C.pixman_image_get_format(image)
 	pixels := C.pixman_image_get_data(image)
 
-	mut buffer := []u8{}
-	for i := 0; i < width * height * 4; i += 4 {
-		p := unsafe {pixels[i]}
-		r := u8(p >> 24)
-		g := u8(p >> 16 & 0xff)
-		b := u8(p >> 8 & 0xff)
-		a := u8(p & 0xff)
-		if a == 0 {
-			buffer << qoi_op_rgba
-			buffer << r
-			buffer << g
-			buffer << b
-			buffer << a
-		} else {
-			buffer << qoi_op_rgb
-			buffer << r
-			buffer << g
-			buffer << b
-		}
+	if format !in [.a8r8g8b8, .x8r8g8b8] {
+		return error('unsupported format')
 	}
 
-	write_to_file(path, buffer)!
+	pixel_count := width * height
+	mut buffer := []u8{cap: pixel_count * 4}
+
+	for i in 0 .. pixel_count {
+		p := unsafe { pixels[i] }
+		b := u8(p & 0xff)
+		g := u8((p >> 8) & 0xff)
+		r := u8((p >> 16) & 0xff)
+		a := u8(p >> 24)
+		buffer << r
+		buffer << g
+		buffer << b
+		buffer << a
+	}
+
+	config := Config{
+		width:       u32(width)
+		height:      u32(height)
+		channels:    4
+		colourspace: 0
+	}
+
+	write(path, buffer, config)!
 }

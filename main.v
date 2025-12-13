@@ -292,12 +292,12 @@ fn main() {
 		done = state.n_done == state.captures.len
 	}
 
-	if geometry == Geometry{0,0,0,0} {
+	if geometry == Geometry{0, 0, 0, 0} {
 		geometry = state.get_extents()
 	}
 	image := render(&state, geometry, scale) or { panic(err) }
 
-	qoi.write_to_qoi(image, 'out.ppm')!
+	qoi.write_to_qoi(image, 'out.qoi')!
 
 	// destroy
 	C.pixman_image_unref(image)
