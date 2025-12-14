@@ -68,6 +68,7 @@ mut:
 enum ImageFormat {
 	ppm
 	qoi
+	jxl
 }
 
 fn (mut o Output) guess_logical_geometry() {

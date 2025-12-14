@@ -122,18 +122,19 @@ pub fn C.JxlEncoderSetUpsamplingMode(enc &C.JxlEncoder, factor i64, mode i64) Jx
 pub fn C.JxlEncoderInitExtraChannelInfo(enc &C.JxlEncoder, info &C.JxlExtraChannelInfo) JxlEncoderStatus
 pub fn C.JxlEncoderSetExtraChannelInfo(enc &C.JxlEncoder, index usize, info &C.JxlExtraChannelInfo) JxlEncoderStatus
 pub fn C.JxlEncoderSetExtraChannelName(enc &C.JxlEncoder, index usize, name &C.char, size usize) JxlEncoderStatus
-pub fn C.JxlEncoderFrameSettingsSetOption(frame_settings &C.JxlEncoderFrameSettings, option C.JxlEncoderFrameSettingId, value i64) C.JxlEncoderStatus
-pub fn C.JxlEncoderFrameSettingsSetFloatOption(frame_settings &C.JxlEncoderFrameSettings, option C.JxlEncoderFrameSettingId, value f32) C.JxlEncoderStatus
-pub fn C.JxlEncoderUseContainer(enc &C.JxlEncoder, use_container bool) C.JxlEncoderStatus
-pub fn C.JxlEncoderStoreJPEGMetadata(enc &C.JxlEncoder, store_jpeg_metadata bool) C.JxlEncoderStatus
-pub fn C.JxlEncoderSetCodestreamLevel(enc &C.JxlEncoder, level int) C.JxlEncoderStatus
+pub fn C.JxlEncoderFrameSettingsSetOption(frame_settings &C.JxlEncoderFrameSettings, option JxlEncoderFrameSettingId, value i64) JxlEncoderStatus
+pub fn C.JxlEncoderFrameSettingsSetFloatOption(frame_settings &C.JxlEncoderFrameSettings, option JxlEncoderFrameSettingId, value f32) JxlEncoderStatus
+pub fn C.JxlEncoderUseContainer(enc &C.JxlEncoder, use_container bool) JxlEncoderStatus
+pub fn C.JxlEncoderStoreJPEGMetadata(enc &C.JxlEncoder, store_jpeg_metadata bool) JxlEncoderStatus
+pub fn C.JxlEncoderSetCodestreamLevel(enc &C.JxlEncoder, level int) JxlEncoderStatus
 pub fn C.JxlEncoderGetRequiredCodestreamLevel(enc &C.JxlEncoder) int
-pub fn C.JxlEncoderSetLossless(enc &C.JxlEncoder, lossless bool) C.JxlEncoderStatus
-pub fn C.JxlEncoderSetFrameDistance(frame_settings &C.JxlEncoderFrameSettings, distance f32) C.JxlEncoderStatus
-pub fn C.JxlEncoderSetExtraChannelDistance(frame_settings &C.JxlEncoderFrameSettings, index usize, distance f32) C.JxlEncoderStatus
+pub fn C.JxlEncoderSetLossless(enc &C.JxlEncoder, lossless bool) JxlEncoderStatus
+pub fn C.JxlEncoderSetFrameLossless(frame_settings &C.JxlEncoderFrameSettings, lossless bool) JxlEncoderStatus
+pub fn C.JxlEncoderSetFrameDistance(frame_settings &C.JxlEncoderFrameSettings, distance f32) JxlEncoderStatus
+pub fn C.JxlEncoderSetExtraChannelDistance(frame_settings &C.JxlEncoderFrameSettings, index usize, distance f32) JxlEncoderStatus
 pub fn C.JxlEncoderDistanceFromQuality(quality f32) f32
 pub fn C.JxlEncoderFrameSettingsCreate(enc &C.JxlEncoder, source &C.JxlEncoderFrameSettings) &C.JxlEncoderFrameSettings
-pub fn C.JxlColorEncodingSetToSRGB(color_encoding &C.JxlColorEncoding, is_gray bool) C.JxlEncoderStatus
+pub fn C.JxlColorEncodingSetToSRGB(color_encoding &C.JxlColorEncoding, is_gray bool) JxlEncoderStatus
 pub fn C.JxlColorEncodingSetToLinearSRGB(color_encoding &C.JxlColorEncoding, is_gray bool)
 pub fn C.JxlEncoderAllowExpertOptions(enc &C.JxlEncoder)
 
