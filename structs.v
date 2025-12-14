@@ -65,6 +65,11 @@ mut:
 	shm_format                        ?wlp.WlShm_Format
 }
 
+enum ImageFormat {
+	ppm
+	qoi
+}
+
 fn (mut o Output) guess_logical_geometry() {
 	o.logical_geometry.x = o.x
 	o.logical_geometry.y = o.y
