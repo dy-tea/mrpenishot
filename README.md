@@ -9,6 +9,7 @@ _Wayland screenshot application written in the V programming language_
 - [wayland & wayland-scanner](https://gitlab.freedesktop.org/wayland/wayland)
 - [wayland-protocols](https://gitlab.freedesktop.org/wayland/wayland-protocols)
 - [pixman-1](https://gitlab.freedesktop.org/pixman/pixman)
+- [libjxl](https://github.com/libjxl/libjxl)
 - pkg-config
 
 ### Building
@@ -19,7 +20,7 @@ v .              # build
 
 ### NOTE
 
-This project is very unfinished, it currently only takes a screenshot of your entire screen and only PPM images are supported.
+This project is very unfinished.
 
 ### References
 - [grim](https://gitlab.freedesktop.org/emersion/grim)
