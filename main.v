@@ -2,6 +2,7 @@ module main
 
 import qoi
 import jxl
+import png
 import math
 import protocols.wayland as wlp
 import protocols.xdg_output_unstable_v1 as xo
@@ -298,7 +299,7 @@ fn main() {
 	}
 	image := render(&state, geometry, scale) or { panic(err) }
 
-	jxl.write_to_jxl(image, 'out.jxl')!
+	png.write_to_png(image, 'out.png')!
 
 	// destroy
 	C.pixman_image_unref(image)

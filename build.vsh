@@ -48,6 +48,7 @@ pkg_installed('wayland-protocols', 1.37)
 pkg_installed('wayland-client', none)
 pkg_installed('pixman-1', none)
 pkg_installed('libjxl', none)
+pkg_installed('libpng16', none)
 
 // build vscanner
 sh('v ${vscanner_dir}')

@@ -10,6 +10,7 @@ _Wayland screenshot application written in the V programming language_
 - [wayland-protocols](https://gitlab.freedesktop.org/wayland/wayland-protocols)
 - [pixman-1](https://gitlab.freedesktop.org/pixman/pixman)
 - [libjxl](https://github.com/libjxl/libjxl)
+- [libpng16](https://github.com/pnggroup/libpng)
 - pkg-config
 
 ### Building

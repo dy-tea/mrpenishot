@@ -66,6 +66,7 @@ mut:
 }
 
 enum ImageFormat {
+	png
 	ppm
 	qoi
 	jxl
