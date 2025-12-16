@@ -127,11 +127,12 @@ fn compute_composite_region(out2com &C.pixman_f_transform, output_width int, out
 }
 
 fn render(state &State, geometry &Geometry, scale f64) !&C.pixman_image_t {
+	null := unsafe { nil }
 	common_width := int(geometry.width * scale)
 	common_height := int(geometry.height * scale)
 	common_image := C.pixman_image_create_bits(px.Pixman_format_code_t.a8r8g8b8, common_width,
-		common_height, unsafe { nil }, 0)
-	if common_image == unsafe { nil } {
+		common_height, null, 0)
+	if common_image == null {
 		return error('failed to create image with size: ${common_width} x ${common_height}')
 	}
 
@@ -164,22 +165,22 @@ fn render(state &State, geometry &Geometry, scale f64) !&C.pixman_image_t {
 
 		mut out2com := C.pixman_f_transform{}
 		C.pixman_f_transform_init_identity(&out2com)
-		C.pixman_f_transform_translate(&out2com, unsafe { nil }, -f64(buffer.width) / 2,
+		C.pixman_f_transform_translate(&out2com, null, -f64(buffer.width) / 2,
 			-f64(buffer.height) / 2)
-		C.pixman_f_transform_scale(&out2com, unsafe { nil }, f64(output_width) / raw_output_width,
+		C.pixman_f_transform_scale(&out2com, null, f64(output_width) / raw_output_width,
 			f64(output_height) * output_flipped_y / raw_output_height)
-		C.pixman_f_transform_rotate(&out2com, unsafe { nil }, math.round(math.cos(get_output_rotation(capture.transform))),
+		C.pixman_f_transform_rotate(&out2com, null, math.round(math.cos(get_output_rotation(capture.transform))),
 			math.round(math.sin(get_output_rotation(capture.transform))))
-		C.pixman_f_transform_scale(&out2com, unsafe { nil }, f64(output_flipped_x), 1)
-		C.pixman_f_transform_translate(&out2com, unsafe { nil }, f64(output_width) / 2,
+		C.pixman_f_transform_scale(&out2com, null, f64(output_flipped_x), 1)
+		C.pixman_f_transform_translate(&out2com, null, f64(output_width) / 2,
 			f64(output_height) / 2)
-		C.pixman_f_transform_translate(&out2com, unsafe { nil }, f64(output_x), f64(output_y))
-		C.pixman_f_transform_scale(&out2com, unsafe { nil }, scale, scale)
+		C.pixman_f_transform_translate(&out2com, null, f64(output_x), f64(output_y))
+		C.pixman_f_transform_scale(&out2com, null, scale, scale)
 
 		composite_dest, grid_aligned := compute_composite_region(&out2com, buffer.width,
 			buffer.height)
 
-		C.pixman_f_transform_translate(&out2com, unsafe { nil }, f64(-composite_dest.x),
+		C.pixman_f_transform_translate(&out2com, null, f64(-composite_dest.x),
 			f64(-composite_dest.y))
 
 		mut com2out := C.pixman_f_transform{}
@@ -192,7 +193,7 @@ fn render(state &State, geometry &Geometry, scale f64) !&C.pixman_image_t {
 		y_scale := math.max(math.abs(out2com.m[1][0]), math.abs(out2com.m[1][1]))
 
 		if x_scale >= 0.75 && y_scale >= 0.75 {
-			C.pixman_image_set_filter(output_image, px.Pixman_filter_t.bilinear, unsafe { nil },
+			C.pixman_image_set_filter(output_image, px.Pixman_filter_t.bilinear, null,
 				0)
 		} else {
 			mut n_values := 0
