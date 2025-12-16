@@ -1,9 +1,11 @@
 module main
 
+import os
 import qoi
 import jxl
 import png
 import math
+import flag
 import protocols.wayland as wlp
 import protocols.xdg_output_unstable_v1 as xo
 import protocols.ext_image_copy_capture_v1 as cc
@@ -219,41 +221,54 @@ const registry_listener = C.wl_registry_listener{
 }
 
 fn main() {
+	mut fp := flag.new_flag_parser(os.args)
+	fp.application('mrpenishot')
+	fp.version('0.0.0')
+	fp.skip_executable()
+	image_format := fp.string('format', `f`, 'png', 'output image format (png, ppm, qoi, jxl)')
+	additional_args := fp.finalize() or {
+		eprintln(err)
+		println(fp.usage())
+		return
+	}
+	if additional_args.len > 1 {
+		eprintln('ERROR: more than one arg supplied')
+		println(fp.usage())
+	}
+	output_filename := if additional_args.len < 1 { 'out.${image_format}' } else { additional_args[0] }
+
+	// init display
 	display_proxy := C.wl_display_connect(unsafe { nil })
 	if display_proxy == unsafe { nil } {
 		panic('Failed to connect to Wayland display')
 	}
-
 	mut display := &wlp.WlDisplay{
 		proxy: display_proxy
 	}
 
+	// init state
 	mut state := State{
 		display:  display
 		registry: display.get_registry()
 	}
-
 	state.registry.add_listener(&registry_listener, &state)
-
 	if C.wl_display_roundtrip(display_proxy) < 0 {
 		panic('wl_display_roundtrip failed')
 	}
 
+	// check for state init
 	if state.shm == none {
 		panic('wl_shm not supported by compositor')
 	}
-
 	if state.ext_output_image_capture_source_manager_v1 == none
 		&& state.ext_image_copy_capture_manager_v1 == none {
 		panic('ext_image_copy_capture_v1 and ext_output_image_capture_source_v1 not supported by compositor')
 	}
-
 	if state.outputs.len == 0 {
 		panic('no outputs found')
 	}
 
-	println('init successful')
-
+	// init output manager
 	if mut manager := state.zxdg_output_manager_v1 {
 		for mut output in state.outputs {
 			output.xdg_output = manager.get_xdg_output(output.wl_output.proxy)
@@ -267,13 +282,13 @@ fn main() {
 			output.guess_logical_geometry()
 		}
 	}
-
 	if state.zxdg_output_manager_v1 != none {
 		if C.wl_display_roundtrip(display_proxy) < 0 {
 			panic('wl_display_roundtrip failed')
 		}
 	}
 
+	// calculate geometry
 	mut geometry := Geometry{} // TODO: grab geometry from somewhere
 	mut scale := 1.0
 	for output in state.outputs {
@@ -289,17 +304,36 @@ fn main() {
 		panic('no captures found')
 	}
 
+	// dispatch captures
 	mut done := false
 	for !done && C.wl_display_dispatch(display_proxy) != -1 {
 		done = state.n_done == state.captures.len
 	}
-
 	if geometry == Geometry{0, 0, 0, 0} {
 		geometry = state.get_extents()
 	}
+
+	// render image
 	image := render(&state, geometry, scale) or { panic(err) }
 
-	png.write_to_png(image, 'out.png')!
+	// write file
+	match image_format {
+		'png' {
+			png.write_to_png(image, output_filename)!
+		}
+		'ppm' {
+			write_to_ppm(image, output_filename)
+		}
+		'qoi' {
+			qoi.write_to_qoi(image, output_filename)!
+		}
+		'jxl' {
+			jxl.write_to_jxl(image, output_filename)!
+		}
+		else {
+			println('ERROR: unrecognized image format `${image_format}` not in [png, ppm, qoi, jxl]')
+		}
+	}
 
 	// destroy
 	C.pixman_image_unref(image)
