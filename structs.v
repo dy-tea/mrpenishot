@@ -28,6 +28,7 @@ mut:
 	ext_image_copy_capture_manager_v1                    ?&cc.ExtImageCopyCaptureManagerV1
 
 	outputs  []Output
+	toplevels []&Toplevel
 	captures []&Capture
 	n_done   int
 }
@@ -49,8 +50,16 @@ mut:
 	logical_geometry Geometry
 }
 
+@[heap]
+struct Toplevel {
+	handle &ft.ExtForeignToplevelHandleV1
+mut:
+	identifier string
+}
+
 struct Capture {
 	output ?&Output
+	toplevel ?&Toplevel
 mut:
 	state &State
 

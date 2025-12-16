@@ -7,28 +7,28 @@ import pixman as px
 fn get_pixman_format(wl_fmt wlp.WlShm_Format) !px.Pixman_format_code_t {
 	return match wl_fmt {
 		.argb8888 {
-			px.Pixman_format_code_t.b8g8r8a8
-		}
-		.xrgb8888 {
-			px.Pixman_format_code_t.b8g8r8x8
-		}
-		.abgr8888 {
-			px.Pixman_format_code_t.r8g8b8a8
-		}
-		.xbgr8888 {
-			px.Pixman_format_code_t.r8g8b8x8
-		}
-		.bgra8888 {
 			px.Pixman_format_code_t.a8r8g8b8
 		}
-		.bgrx8888 {
+		.xrgb8888 {
 			px.Pixman_format_code_t.x8r8g8b8
 		}
-		.rgba8888 {
+		.abgr8888 {
 			px.Pixman_format_code_t.a8b8g8r8
 		}
-		.rgbx8888 {
+		.xbgr8888 {
 			px.Pixman_format_code_t.x8b8g8r8
+		}
+		.bgra8888 {
+			px.Pixman_format_code_t.b8g8r8a8
+		}
+		.bgrx8888 {
+			px.Pixman_format_code_t.b8g8r8x8
+		}
+		.rgba8888 {
+			px.Pixman_format_code_t.r8g8b8a8
+		}
+		.rgbx8888 {
+			px.Pixman_format_code_t.r8g8b8x8
 		}
 		.argb2101010 {
 			px.Pixman_format_code_t.a2r10g10b10
@@ -227,6 +227,23 @@ fn render(state &State, geometry &Geometry, scale f64) !&C.pixman_image_t {
 		}
 
 		C.pixman_image_unref(output_image)
+	}
+
+	// transpareny for toplevel
+	has_toplevel := state.captures.any(it.toplevel != none)
+	has_output := state.captures.any(it.output != none)
+	if has_toplevel && !has_output {
+		data := unsafe { &u32(C.pixman_image_get_data(common_image)) }
+		stride_bytes := C.pixman_image_get_stride(common_image)
+		for y in 0 .. common_height {
+			row := unsafe { &u32(&u8(data) + y * stride_bytes) }
+			for x in 0 .. common_width {
+				pixel := unsafe { row[x] }
+				if pixel & 0x00FFFFFF == 0 {
+					unsafe { row[x] = 0x0000000 }
+				}
+			}
+		}
 	}
 
 	return common_image

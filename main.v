@@ -48,7 +48,17 @@ fn session_handle_buffer_size(mut capture Capture, session &cc.ExtImageCopyCaptu
 
 fn session_handle_shm_format(mut capture Capture, session &cc.ExtImageCopyCaptureSessionV1, format u32) {
 	fmt := unsafe { wlp.WlShm_Format(format) }
-	if capture.shm_format != none {
+
+	is_toplevel := capture.toplevel != none
+	has_alpha := fmt in [.argb8888, .abgr8888, .bgra8888, .rgba8888, .argb2101010, .abgr2101010]
+	if current_fmt := capture.shm_format {
+		if is_toplevel && has_alpha {
+			current_has_alpha := current_fmt in [.argb8888, .abgr8888, .bgra8888, .rgba8888, .argb2101010, .abgr2101010]
+			if !current_has_alpha {
+				get_pixman_format(fmt) or { return }
+				capture.shm_format = fmt
+			}
+		}
 		return
 	}
 	get_pixman_format(fmt) or { return }
@@ -171,6 +181,56 @@ const output_listener = C.wl_output_listener{
 	description: fn (_ voidptr, _ &wlp.WlOutput, _ &char) {}
 }
 
+fn foreign_toplevel_handle_identifier(mut toplevel &Toplevel, toplevel_handle voidptr, identifier &char) {
+	toplevel.identifier = unsafe { identifier.vstring() }
+}
+
+const foreign_toplevel_listener = C.ext_foreign_toplevel_handle_v1_listener{
+	closed:     fn (_ voidptr, _ voidptr) {}
+	done:       fn (_ voidptr, _ voidptr) {}
+	title:      fn (_ voidptr, _ voidptr, _ &char) {}
+	app_id:     fn (_ voidptr, _ voidptr, _ &char) {}
+	identifier: foreign_toplevel_handle_identifier
+}
+
+fn foreign_toplevel_list_handle_toplevel(mut state &State, list voidptr, toplevel_handle voidptr) {
+	mut handle := &ft.ExtForeignToplevelHandleV1{
+		proxy: toplevel_handle
+	}
+	toplevel := &Toplevel{
+		handle: handle
+	}
+	handle.add_listener(&foreign_toplevel_listener, toplevel)
+	state.toplevels << toplevel
+}
+
+const foreign_toplevel_list_listener = C.ext_foreign_toplevel_list_v1_listener{
+	toplevel: foreign_toplevel_list_handle_toplevel
+	finished: fn (_ voidptr, _ voidptr) {}
+}
+
+fn (mut state State) capture_toplevel(toplevel &Toplevel, include_cursor bool) {
+	mut capture := &Capture{
+		state:    &state
+		toplevel: &toplevel
+	}
+	options := if include_cursor {
+		u32(cc.ExtImageCopyCaptureManagerV1_Options.paint_cursors)
+	} else {
+		0
+	}
+	if mut source_manager := state.ext_foreign_toplevel_image_capture_source_manager_v1 {
+		mut source := source_manager.create_source(toplevel.handle.proxy)
+		if mut capture_manager := state.ext_image_copy_capture_manager_v1 {
+			mut session := capture_manager.create_session(source.proxy, options)
+			capture.ext_image_copy_capture_session_v1 = session
+			session.add_listener(&session_listener, capture)
+		}
+		source.destroy()
+	}
+	state.captures << capture
+}
+
 fn registry_handle_global(mut state State, registry voidptr, name u32, iface &char, version u32) {
 	interface_name := unsafe { iface.vstring() }
 
@@ -226,6 +286,8 @@ fn main() {
 	fp.version('0.0.0')
 	fp.skip_executable()
 	image_format := fp.string('format', `f`, 'png', 'output image format (png, ppm, qoi, jxl)')
+	include_cursor := fp.bool('cursor', `c`, false, 'include cursor in resulting image')
+	toplevel_identifier := fp.string('toplevel', `t`, '', 'use a toplevel as the screenshot source by its identifier')
 	additional_args := fp.finalize() or {
 		eprintln(err)
 		println(fp.usage())
@@ -235,7 +297,11 @@ fn main() {
 		eprintln('ERROR: more than one arg supplied')
 		println(fp.usage())
 	}
-	output_filename := if additional_args.len < 1 { 'out.${image_format}' } else { additional_args[0] }
+	output_filename := if additional_args.len < 1 {
+		'out.${image_format}'
+	} else {
+		additional_args[0]
+	}
 
 	// init display
 	display_proxy := C.wl_display_connect(unsafe { nil })
@@ -256,6 +322,14 @@ fn main() {
 		panic('wl_display_roundtrip failed')
 	}
 
+	// add toplevel listener if available
+	if mut list := state.ext_foreign_toplevel_list_v1 {
+		list.add_listener(&foreign_toplevel_list_listener, &state)
+		if C.wl_display_roundtrip(display_proxy) < 0 {
+			panic('wl_display_roundtrip failed')
+		}
+	}
+
 	// check for state init
 	if state.shm == none {
 		panic('wl_shm not supported by compositor')
@@ -263,6 +337,11 @@ fn main() {
 	if state.ext_output_image_capture_source_manager_v1 == none
 		&& state.ext_image_copy_capture_manager_v1 == none {
 		panic('ext_image_copy_capture_v1 and ext_output_image_capture_source_v1 not supported by compositor')
+	}
+	if toplevel_identifier != '' {
+		if state.ext_foreign_toplevel_image_capture_source_manager_v1 == none {
+			panic('ext_foreign_toplevel_image_capture_source_manager_v1 not supported, cannot capture toplevels')
+		}
 	}
 	if state.outputs.len == 0 {
 		panic('no outputs found')
@@ -288,17 +367,28 @@ fn main() {
 		}
 	}
 
-	// calculate geometry
 	mut geometry := Geometry{} // TODO: grab geometry from somewhere
 	mut scale := 1.0
-	for output in state.outputs {
-		if geometry != Geometry{} && !geometry.intersects(output.logical_geometry) {
-			continue
+	if toplevel_identifier != '' {
+		// capture toplevel
+		matching := state.toplevels.filter(fn [toplevel_identifier] (t &Toplevel) bool {
+			return t.identifier == toplevel_identifier
+		})
+		if matching.len != 1 {
+			panic('cannot find toplevel')
 		}
-		if output.logical_scale > scale {
-			scale = output.logical_scale
+		state.capture_toplevel(matching[0], include_cursor)
+	} else {
+		// capture output
+		for output in state.outputs {
+			if geometry != Geometry{} && !geometry.intersects(output.logical_geometry) {
+				continue
+			}
+			if output.logical_scale > scale {
+				scale = output.logical_scale
+			}
+			state.capture_output(output, include_cursor)
 		}
-		state.capture_output(output, true)
 	}
 	if state.captures.len == 0 {
 		panic('no captures found')
