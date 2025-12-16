@@ -68,6 +68,7 @@ pub fn decode_header(data []u8) !Config {
 // decode decodes a QOI image from memory. If channels is 0, the
 // number of channels from the file header is used. If channels is 3 or 4 the
 // output format will be forced into this number of channels.
+@[direct_array_access]
 pub fn decode(data []u8, channels int) ![]u8 {
 	// V should be able to optimize this:
 	// https://twitter.com/v_language/status/1517099415143690240
@@ -136,6 +137,7 @@ pub fn decode(data []u8, channels int) ![]u8 {
 
 // encode encodes raw RGB or RGBA pixels into a QOI image in memory. The config struct must be filled with the image width, height,
 // number of channels (3 = RGB, 4 = RGBA) and the colourspace.
+@[direct_array_access]
 pub fn encode(data []u8, config Config) ![]u8 {
 	config.is_valid()!
 	max_size := int(config.width * config.height) * (config.channels + 1) + qoi_header_size +
