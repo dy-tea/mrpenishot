@@ -3,17 +3,17 @@ module main
 import math
 
 struct Box {
-	x      i32
-	y      i32
-	width  i32
-	height i32
+	x      int
+	y      int
+	width  int
+	height int
 }
 
 fn Box.new(str string) !Box {
 	pos, size := str.split_once(' ') or { return error('invalid format, no space') }
 	x, y := pos.split_once(',') or { return error('invalid format, no position') }
 	width, height := size.split_once('x') or { return error('invalid format, no size') }
-	return Box{x.i32(), y.i32(), width.i32(), height.i32()}
+	return Box{x.int(), y.int(), width.int(), height.int()}
 }
 
 fn (b Box) is_empty() bool {

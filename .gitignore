@@ -22,3 +22,9 @@ bin/
 # vweb and database
 *.db
 *.js
+
+# supported image formats
+*.png
+*.ppm
+*.jxl
+*.qoi
