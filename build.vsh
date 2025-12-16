@@ -58,7 +58,6 @@ wl_proto_dir := sh('pkg-config --variable=pkgdatadir wayland-protocols').trim_sp
 
 protocols := [
 	wl_dir + '/wayland.xml',
-	'./protocols/wlr-screencopy-unstable-v1.xml',
 	wl_proto_dir + '/staging/ext-image-capture-source/ext-image-capture-source-v1.xml',
 	wl_proto_dir + '/staging/ext-image-copy-capture/ext-image-copy-capture-v1.xml',
 	wl_proto_dir + '/staging/ext-foreign-toplevel-list/ext-foreign-toplevel-list-v1.xml',
