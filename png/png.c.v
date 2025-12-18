@@ -78,5 +78,9 @@ pub fn C.png_write_end(png_ptr C.png_structp, info_ptr C.png_infop)
 
 pub fn C.png_destroy_write_struct(png_ptr_ptr &C.png_structp, info_ptr_ptr &C.png_infop)
 
+pub fn C.png_set_write_fn(png_ptr C.png_structp, io_ptr voidptr, write_data_fn voidptr, output_flush_fn voidptr)
+
+pub fn C.png_get_io_ptr(png_ptr C.png_structp) voidptr
+
 pub fn C.fopen(filename &char, mode &char) voidptr
 pub fn C.fclose(stream voidptr) int

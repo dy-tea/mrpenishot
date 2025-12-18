@@ -1,8 +1,6 @@
 module main
 
-import os
-
-fn write_to_ppm(image &C.pixman_image_t, path string) {
+fn encode_ppm(image &C.pixman_image_t) []u8 {
 	width := C.pixman_image_get_width(image)
 	height := C.pixman_image_get_height(image)
 
@@ -22,5 +20,5 @@ fn write_to_ppm(image &C.pixman_image_t, path string) {
 	}
 
 	buffer.prepend(header.bytes())
-	os.write_bytes(path, buffer) or { panic('Failed to write to file ${path}') }
+	return buffer
 }

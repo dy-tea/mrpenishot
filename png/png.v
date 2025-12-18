@@ -33,7 +33,25 @@ fn pack_row32(row_in &u32, width int, fully_opaque bool, row_out &u8) {
 	}
 }
 
-pub fn write_to_png(image &C.pixman_image_t, path string) ! {
+struct PngWriteContext {
+mut:
+	buffer []u8
+}
+
+fn png_write_callback(png_ptr voidptr, data &u8, length usize) {
+	mut ctx := unsafe { &PngWriteContext(C.png_get_io_ptr(png_ptr)) }
+	unsafe {
+		for i in 0 .. int(length) {
+			ctx.buffer << data[i]
+		}
+	}
+}
+
+fn png_flush_callback(png_ptr voidptr) {
+	// no-op for memory writing
+}
+
+pub fn encode_png(image &C.pixman_image_t) ![]u8 {
 	width := C.pixman_image_get_width(image)
 	height := C.pixman_image_get_height(image)
 	stride := C.pixman_image_get_stride(image)
@@ -73,13 +91,8 @@ pub fn write_to_png(image &C.pixman_image_t, path string) ! {
 		return error('failed to create PNG info struct')
 	}
 
-	stream := C.fopen(path.str, c'wb')
-	if stream == unsafe { nil } {
-		C.png_destroy_write_struct(&png_ptr, &info)
-		return error('failed to open file: ${path}')
-	}
-
-	C.png_init_io(png_ptr, stream)
+	mut ctx := PngWriteContext{}
+	C.png_set_write_fn(png_ptr, &ctx, png_write_callback, png_flush_callback)
 
 	C.png_set_IHDR(png_ptr, info, u32(width), u32(height), bit_depth, color_type,
 		png_interlace_none, png_compression_type_base, png_filter_type_base)
@@ -100,6 +113,7 @@ pub fn write_to_png(image &C.pixman_image_t, path string) ! {
 	}
 
 	C.png_write_end(png_ptr, info)
-	C.fclose(stream)
 	C.png_destroy_write_struct(&png_ptr, &info)
+
+	return ctx.buffer
 }

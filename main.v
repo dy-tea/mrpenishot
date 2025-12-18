@@ -406,23 +406,31 @@ fn main() {
 	// render image
 	image := render(&state, geometry, scale) or { panic(err) }
 
-	// write file
-	match image_format {
+	// encode image
+	encoded := match image_format {
 		'png' {
-			png.write_to_png(image, output_filename)!
+			png.encode_png(image)!
 		}
 		'ppm' {
-			write_to_ppm(image, output_filename)
+			encode_ppm(image)
 		}
 		'qoi' {
-			qoi.write_to_qoi(image, output_filename)!
+			qoi.encode_qoi(image)!
 		}
 		'jxl' {
-			jxl.write_to_jxl(image, output_filename)!
+			jxl.encode_jxl(image)!
 		}
 		else {
-			println('ERROR: unrecognized image format `${image_format}` not in [png, ppm, qoi, jxl]')
+			panic('ERROR: unrecognized image format `${image_format}` not in [png, ppm, qoi, jxl]')
 		}
+	}
+
+	// write to file or stdout
+	if output_filename == '-' {
+		mut stdout := os.stdout()
+		stdout.write(encoded) or { panic('Failed to write to stdout') }
+	} else {
+		os.write_bytes(output_filename, encoded) or { panic('Failed to write to file ${output_filename}') }
 	}
 
 	// destroy

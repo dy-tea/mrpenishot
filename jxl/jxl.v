@@ -1,8 +1,6 @@
 module jxl
 
-import os
-
-pub fn write_to_jxl(image &C.pixman_image_t, path string) ! {
+pub fn encode_jxl(image &C.pixman_image_t) ![]u8 {
 	width := C.pixman_image_get_width(image)
 	height := C.pixman_image_get_height(image)
 	format := C.pixman_image_get_format(image)
@@ -107,6 +105,5 @@ pub fn write_to_jxl(image &C.pixman_image_t, path string) ! {
 		}
 	}
 
-	// write to file
-	os.write_file(path, output.bytestr())!
+	return output
 }
