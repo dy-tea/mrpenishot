@@ -6,14 +6,6 @@ import protocols.ext_image_copy_capture_v1 as cc
 import protocols.ext_image_capture_source_v1 as cs
 import protocols.ext_foreign_toplevel_list_v1 as ft
 
-struct Geometry {
-mut:
-	x      int
-	y      int
-	width  int
-	height int
-}
-
 @[heap]
 struct State {
 mut:
@@ -82,9 +74,4 @@ fn (mut o Output) guess_logical_geometry() {
 	o.logical_geometry.width, o.logical_geometry.height = transform_output(o.transform,
 		o.logical_geometry.width, o.logical_geometry.height)
 	o.logical_scale = o.scale
-}
-
-fn (a Geometry) intersects(b Geometry) bool {
-	return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height
-		&& a.y + a.height > b.y
 }

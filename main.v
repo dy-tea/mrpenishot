@@ -287,6 +287,7 @@ fn main() {
 	fp.skip_executable()
 	image_format := fp.string('format', `f`, 'png', 'output image format (png, ppm, qoi, jxl)')
 	include_cursor := fp.bool('cursor', `c`, false, 'include cursor in resulting image')
+	passed_geometry := fp.string('geometry', `g`, '', 'geometry in the format "400,500 200x300"')
 	toplevel_identifier := fp.string('toplevel', `t`, '', 'use a toplevel as the screenshot source by its identifier')
 	additional_args := fp.finalize() or {
 		eprintln(err)
@@ -301,6 +302,11 @@ fn main() {
 		'out.${image_format}'
 	} else {
 		additional_args[0]
+	}
+	mut geometry := if passed_geometry == '' {
+		Geometry{}
+	} else {
+		Geometry.new(passed_geometry) or { panic('invalid geometry') }
 	}
 
 	// init display
@@ -367,7 +373,6 @@ fn main() {
 		}
 	}
 
-	mut geometry := Geometry{} // TODO: grab geometry from somewhere
 	mut scale := 1.0
 	if toplevel_identifier != '' {
 		// capture toplevel
@@ -381,7 +386,7 @@ fn main() {
 	} else {
 		// capture output
 		for output in state.outputs {
-			if geometry != Geometry{} && !geometry.intersects(output.logical_geometry) {
+			if geometry != Geometry{} && !geometry.intersect(output.logical_geometry) {
 				continue
 			}
 			if output.logical_scale > scale {

@@ -54,7 +54,7 @@ fn get_min_stride(fmt wlp.WlShm_Format, width u32) u32 {
 	return ((width * bpp + 0x1f) >> 5) * 4
 }
 
-fn compute_composite_region(out2com &C.pixman_f_transform, output_width int, output_height int) (Box, bool) {
+fn compute_composite_region(out2com &C.pixman_f_transform, output_width int, output_height int) (Geometry, bool) {
 	mut o2c_fixedpt := C.pixman_transform{}
 	C.pixman_transform_from_pixman_f_transform(&o2c_fixedpt, out2com)
 
@@ -116,7 +116,7 @@ fn compute_composite_region(out2com &C.pixman_f_transform, output_width int, out
 	y1 := px.pixman_fixed_to_int(px.pixman_fixed_floor(y_min))
 	y2 := px.pixman_fixed_to_int(px.pixman_fixed_ceil(y_max))
 
-	dest := Box{
+	dest := Geometry{
 		x:      x1
 		y:      y1
 		width:  x2 - x1

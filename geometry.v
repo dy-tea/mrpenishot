@@ -2,25 +2,26 @@ module main
 
 import math
 
-struct Box {
+struct Geometry {
+mut:
 	x      int
 	y      int
 	width  int
 	height int
 }
 
-fn Box.new(str string) !Box {
+fn Geometry.new(str string) !Geometry {
 	pos, size := str.split_once(' ') or { return error('invalid format, no space') }
 	x, y := pos.split_once(',') or { return error('invalid format, no position') }
 	width, height := size.split_once('x') or { return error('invalid format, no size') }
-	return Box{x.int(), y.int(), width.int(), height.int()}
+	return Geometry{x.int(), y.int(), width.int(), height.int()}
 }
 
-fn (b Box) is_empty() bool {
+fn (b Geometry) is_empty() bool {
 	return b.width <= 0 || b.height <= 0
 }
 
-fn (b Box) intersect(o Box) bool {
+fn (b Geometry) intersect(o Geometry) bool {
 	if b.is_empty() || o.is_empty() {
 		return false
 	}
@@ -30,6 +31,6 @@ fn (b Box) intersect(o Box) bool {
 	x2 := math.min(b.x + b.width, o.x + o.width)
 	y2 := math.min(b.y + b.height, o.y + o.height)
 
-	r := Box{x1, y1, x2 - x1, y2 - y1}
+	r := Geometry{x1, y1, x2 - x1, y2 - y1}
 	return !r.is_empty()
 }

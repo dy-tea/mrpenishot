@@ -52,5 +52,5 @@ fn get_output_flipped(transform wlp.WlOutput_Transform) int {
 }
 
 fn intersect_box(a &Geometry, b &Geometry) bool {
-	return a.intersects(b)
+	return a.intersect(b)
 }
