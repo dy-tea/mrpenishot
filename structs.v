@@ -52,8 +52,8 @@ mut:
 
 @[heap]
 struct Toplevel {
-	handle &ft.ExtForeignToplevelHandleV1
 mut:
+	handle &ft.ExtForeignToplevelHandleV1
 	identifier string
 }
 

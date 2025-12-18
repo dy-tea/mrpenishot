@@ -446,10 +446,22 @@ fn main() {
 			buffer.destroy()
 		}
 	}
+	for mut output in state.outputs {
+		if mut xdg := output.xdg_output {
+			xdg.destroy()
+		}
+		output.wl_output.release()
+	}
+	for mut toplevel in state.toplevels {
+		toplevel.handle.destroy()
+	}
 	if mut manager := state.ext_foreign_toplevel_list_v1 {
 		manager.destroy()
 	}
 	if mut manager := state.ext_output_image_capture_source_manager_v1 {
+		manager.destroy()
+	}
+	if mut manager := state.ext_foreign_toplevel_image_capture_source_manager_v1 {
 		manager.destroy()
 	}
 	if mut manager := state.ext_image_copy_capture_manager_v1 {
