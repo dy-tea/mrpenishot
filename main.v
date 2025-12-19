@@ -16,6 +16,8 @@ import protocols.ext_foreign_toplevel_list_v1 as ft
 #include <wayland-client.h>
 #include <wayland-client-protocol.h>
 
+const supported_formats = ["png", "ppm", "qoi", "jxl"]
+
 fn frame_handle_transform(mut capture Capture, frame &cc.ExtImageCopyCaptureFrameV1, transform u32) {
 	capture.transform = unsafe { wlp.WlOutput_Transform(transform) }
 }
@@ -281,13 +283,15 @@ const registry_listener = C.wl_registry_listener{
 }
 
 fn main() {
+	// parse args
 	mut fp := flag.new_flag_parser(os.args)
 	fp.application('mrpenishot')
 	fp.version('0.0.0')
 	fp.skip_executable()
-	image_format := fp.string('format', `f`, 'png', 'output image format (png, ppm, qoi, jxl)')
+	mut image_format := fp.string('format', `f`, 'png', 'output image format ${supported_formats}')
 	include_cursor := fp.bool('cursor', `c`, false, 'include cursor in resulting image')
 	passed_geometry := fp.string('geometry', `g`, '', 'geometry in the format "400,500 200x300"')
+	output_name := fp.string('output', `o`, '', 'name of output to screenshot')
 	toplevel_identifier := fp.string('toplevel', `t`, '', 'use a toplevel as the screenshot source by its identifier')
 	additional_args := fp.finalize() or {
 		eprintln(err)
@@ -298,15 +302,34 @@ fn main() {
 		eprintln('ERROR: more than one arg supplied')
 		println(fp.usage())
 	}
+
+	// get output filename if passed
 	output_filename := if additional_args.len < 1 {
 		'out.${image_format}'
 	} else {
-		additional_args[0]
+		name := additional_args[0]
+		if _, fmt := name.split_once('.') {
+			// if not default format and supported, update from file extension
+			if fmt != 'png' && fmt in supported_formats {
+				image_format = fmt
+			}
+		}
+		name
 	}
+
+	// get geometry if passed
 	mut geometry := if passed_geometry == '' {
 		Geometry{}
 	} else {
 		Geometry.new(passed_geometry) or { panic('invalid geometry') }
+	}
+
+	// mutual exclusion
+	if output_name != '' && geometry != Geometry{} {
+		panic('ERROR: cannot specify both output and geometry')
+	}
+	if output_name != '' && toplevel_identifier != '' {
+		panic('ERROR: cannot specify both output and toplevel')
 	}
 
 	// init display
@@ -426,7 +449,7 @@ fn main() {
 			jxl.encode_jxl(image)!
 		}
 		else {
-			panic('ERROR: unrecognized image format `${image_format}` not in [png, ppm, qoi, jxl]')
+			panic('ERROR: unrecognized image format `${image_format}` not in ${supported_formats}')
 		}
 	}
 
