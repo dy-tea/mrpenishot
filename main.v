@@ -16,7 +16,8 @@ import protocols.ext_foreign_toplevel_list_v1 as ft
 #include <wayland-client.h>
 #include <wayland-client-protocol.h>
 
-const supported_formats = ["png", "ppm", "qoi", "jxl"]
+const mrpenishot_version = '1.0.0'
+const supported_formats = ['png', 'ppm', 'qoi', 'jxl']
 
 fn frame_handle_transform(mut capture Capture, frame &cc.ExtImageCopyCaptureFrameV1, transform u32) {
 	capture.transform = unsafe { wlp.WlOutput_Transform(transform) }
@@ -286,7 +287,7 @@ fn main() {
 	// parse args
 	mut fp := flag.new_flag_parser(os.args)
 	fp.application('mrpenishot')
-	fp.version('0.0.0')
+	fp.version(mrpenishot_version)
 	fp.skip_executable()
 	mut image_format := fp.string('format', `f`, 'png', 'output image format ${supported_formats}')
 	include_cursor := fp.bool('cursor', `c`, false, 'include cursor in resulting image')
