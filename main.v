@@ -396,6 +396,17 @@ fn main() {
 		}
 	}
 
+	// grab geometry from output name
+	if output_name != '' {
+		matching := state.outputs.filter(fn [output_name] (o Output) bool {
+			return o.name == output_name
+		})
+		if matching.len != 1 {
+			panic('ERROR: unrecognized output name `${output_name}`')
+		}
+		geometry = matching[0].logical_geometry
+	}
+
 	mut scale := 1.0
 	if toplevel_identifier != '' {
 		// capture toplevel

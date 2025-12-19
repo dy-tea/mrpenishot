@@ -24,6 +24,7 @@ v .              # build
 mrpenishot                                      # all outputs
 mrpenishot -c                                   # including cursor
 mrpenishot out.png                              # output to file
+mrpenishot -o "DP-1"                            # geometry of output
 mrpenishot -f jxl                               # output to jxl
 mrpenishot -g "100,200 300x400"                 # geometry
 mrpenishot -g "$(slurp)"                        # geometry from slurp
