@@ -33,6 +33,7 @@ fn pkg_installed(name string, version ?f64) {
 
 protocols_dir := './protocols'
 vscanner_dir := './vscanner'
+exe_name := 'mrpenishot'
 
 if arguments().contains('clean') {
 	cmd := 'rm -r ${protocols_dir}/*/'
@@ -78,4 +79,11 @@ for protocol in protocols {
 		sh('wayland-scanner client-header ${protocol} ${header_file}')
 		sh('wayland-scanner private-code ${protocol} ${code_file}')
 	}
+}
+
+if arguments().contains('install') {
+	sh('v -prod .')
+	user := sh('logname').trim_space()
+	sh('chown ${user}:${user} ./${exe_name}')
+	sh('cp ./${exe_name} /usr/bin')
 }
