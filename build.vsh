@@ -85,5 +85,6 @@ if arguments().contains('install') {
 	sh('v -prod .')
 	user := sh('logname').trim_space()
 	sh('chown ${user}:${user} ./${exe_name}')
+	sh('chown -R ${user}:${user} ./${protocols_dir}')
 	sh('cp ./${exe_name} /usr/bin')
 }
