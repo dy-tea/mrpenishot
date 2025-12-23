@@ -158,7 +158,7 @@ fn render(state &State, geometry &Geometry, scale f64) !&C.pixman_image_t {
 
 		output_image := C.pixman_image_create_bits(pixman_fmt, buffer.width, buffer.height,
 			buffer.data, buffer.stride)
-		if output_image == unsafe { nil } {
+		if output_image == null {
 			C.pixman_image_unref(common_image)
 			return error('Failed to create output image')
 		}
@@ -234,14 +234,16 @@ fn render(state &State, geometry &Geometry, scale f64) !&C.pixman_image_t {
 	has_toplevel := state.captures.any(it.toplevel != none)
 	has_output := state.captures.any(it.output != none)
 	if has_toplevel && !has_output {
-		data := unsafe { &u32(C.pixman_image_get_data(common_image)) }
-		stride_bytes := C.pixman_image_get_stride(common_image)
-		for y in 0 .. common_height {
-			row := unsafe { &u32(&u8(data) + y * stride_bytes) }
-			for x in 0 .. common_width {
-				pixel := unsafe { row[x] }
-				if pixel & 0x00FFFFFF == 0 {
-					unsafe { row[x] = 0x0000000 }
+		unsafe {
+			data := &u32(C.pixman_image_get_data(common_image))
+			stride_bytes := C.pixman_image_get_stride(common_image)
+			for y in 0 .. common_height {
+				row := &u32(&u8(data) + y * stride_bytes)
+				for x in 0 .. common_width {
+					pixel := row[x]
+					if pixel & 0x00FFFFFF == 0 {
+						row[x] = 0x0000000
+					}
 				}
 			}
 		}
