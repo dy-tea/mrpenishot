@@ -51,13 +51,11 @@ fn session_handle_buffer_size(mut capture Capture, session &cc.ExtImageCopyCaptu
 
 fn session_handle_shm_format(mut capture Capture, session &cc.ExtImageCopyCaptureSessionV1, format u32) {
 	fmt := unsafe { wlp.WlShm_Format(format) }
-
+	alpha_formats := [wlp.WlShm_Format.argb8888, .abgr8888, .bgra8888, .rgba8888, .argb2101010, .abgr2101010]
 	is_toplevel := capture.toplevel != none
-	has_alpha := fmt in [.argb8888, .abgr8888, .bgra8888, .rgba8888, .argb2101010, .abgr2101010]
 	if current_fmt := capture.shm_format {
-		if is_toplevel && has_alpha {
-			current_has_alpha := current_fmt in [.argb8888, .abgr8888, .bgra8888, .rgba8888, .argb2101010, .abgr2101010]
-			if !current_has_alpha {
+		if is_toplevel && fmt in alpha_formats {
+			if current_fmt !in alpha_formats {
 				get_pixman_format(fmt) or { return }
 				capture.shm_format = fmt
 			}
