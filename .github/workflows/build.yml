@@ -1,0 +1,28 @@
+name: Build (prod)
+
+on:
+  push:
+    branches:
+      - "*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup V
+        uses: vlang/setup-v@v1.4
+
+      - name: Install deps
+        run: |
+          sudo apt install wayland-utils   \
+          wayland-protocols libwayland-dev \
+          libpixman-1-dev libjxl-dev libpng-dev
+
+      - name: Build
+        run: |
+          v run build.vsh
+          v -prod .
