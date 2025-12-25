@@ -1,8 +1,6 @@
 module jxl
 
-#flag linux -L/usr/lib
-#flag linux -ljxl
-#flag linux -I/usr/include
+#pkgconfig libjxl
 #include <jxl/types.h>
 
 pub enum JxlDataType {

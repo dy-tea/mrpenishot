@@ -8,9 +8,7 @@ import flag
 import protocols.wayland as wlp
 import protocols.ext_image_copy_capture_v1 as cc
 
-#flag linux -lwayland-client
-#include <wayland-client.h>
-#include <wayland-client-protocol.h>
+#pkgconfig wayland-client
 
 const mrpenishot_version = '1.0.0'
 const supported_formats = ['png', 'ppm', 'qoi', 'jxl']

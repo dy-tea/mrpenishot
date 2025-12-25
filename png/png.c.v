@@ -1,8 +1,6 @@
 module png
 
-#flag linux -L/usr/lib
-#flag linux -lpng16
-#flag linux -I/usr/include
+#pkgconfig libpng16
 #include <libpng16/png.h>
 #include <stdio.h>
 

@@ -1,9 +1,7 @@
 module pixman
 
-#flag linux -I/usr/include/pixman-1
-#include <pixman.h>
-#flag linux -L/usr/lib
-#flag linux -lpixman-1
+#pkgconfig pixman-1
+#include <pixman-1/pixman.h>
 
 // boolean
 
