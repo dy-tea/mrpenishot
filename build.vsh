@@ -86,5 +86,5 @@ if arguments().contains('install') {
 	user := sh('logname').trim_space()
 	sh('chown ${user}:${user} ./${exe_name}')
 	sh('chown -R ${user}:${user} ./${protocols_dir}')
-	sh('cp ./${exe_name} /usr/bin')
+	sh('cp ./${exe_name} /usr/local/bin/${exe_name}')
 }
