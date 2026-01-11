@@ -242,6 +242,7 @@ fn write_all(data []u8, mut w io.Writer) ! {
 	}
 }
 
+@[direact_array_access]
 pub fn encode_qoi(image &C.pixman_image_t) ![]u8 {
 	width := C.pixman_image_get_width(image)
 	height := C.pixman_image_get_height(image)
@@ -249,7 +250,7 @@ pub fn encode_qoi(image &C.pixman_image_t) ![]u8 {
 	pixels := C.pixman_image_get_data(image)
 
 	if format !in [.a8r8g8b8, .x8r8g8b8] {
-		return error('unsupported format')
+		return error('QOI only supports up to 8 bit color depth')
 	}
 
 	pixel_count := width * height

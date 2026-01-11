@@ -3,6 +3,7 @@ module main
 import math
 import protocols.wayland as wlp
 import pixman as px
+import arrays
 
 fn get_pixman_format(wl_fmt wlp.WlShm_Format) !px.Pixman_format_code_t {
 	return match wl_fmt {
@@ -126,12 +127,21 @@ fn compute_composite_region(out2com &C.pixman_f_transform, output_width int, out
 	return dest, grid_aligned
 }
 
+@[direct_array_access]
 fn render(state &State, geometry &Geometry, scale f64) !&C.pixman_image_t {
 	null := unsafe { nil }
+	common_format := arrays.max(state.captures.map(fn (capture &Capture) px.Pixman_format_code_t {
+		for {
+			if buffer := capture.buffer {
+				return get_pixman_format(buffer.shm_format) or { break }
+			}
+		}
+		return px.Pixman_format_code_t.a8r8g8b8
+	})) or { px.Pixman_format_code_t.a8r8g8b8 }
 	common_width := int(geometry.width * scale)
 	common_height := int(geometry.height * scale)
-	common_image := C.pixman_image_create_bits(px.Pixman_format_code_t.a8r8g8b8, common_width,
-		common_height, null, 0)
+	common_image := C.pixman_image_create_bits(common_format, common_width, common_height,
+		null, 0)
 	if common_image == null {
 		return error('failed to create image with size: ${common_width} x ${common_height}')
 	}
@@ -165,23 +175,20 @@ fn render(state &State, geometry &Geometry, scale f64) !&C.pixman_image_t {
 
 		mut out2com := C.pixman_f_transform{}
 		C.pixman_f_transform_init_identity(&out2com)
-		C.pixman_f_transform_translate(&out2com, null, -f64(buffer.width) / 2,
-			-f64(buffer.height) / 2)
+		C.pixman_f_transform_translate(&out2com, null, -f64(buffer.width) / 2, -f64(buffer.height) / 2)
 		C.pixman_f_transform_scale(&out2com, null, f64(output_width) / raw_output_width,
 			f64(output_height) * output_flipped_y / raw_output_height)
 		C.pixman_f_transform_rotate(&out2com, null, math.round(math.cos(get_output_rotation(capture.transform))),
 			math.round(math.sin(get_output_rotation(capture.transform))))
 		C.pixman_f_transform_scale(&out2com, null, f64(output_flipped_x), 1)
-		C.pixman_f_transform_translate(&out2com, null, f64(output_width) / 2,
-			f64(output_height) / 2)
+		C.pixman_f_transform_translate(&out2com, null, f64(output_width) / 2, f64(output_height) / 2)
 		C.pixman_f_transform_translate(&out2com, null, f64(output_x), f64(output_y))
 		C.pixman_f_transform_scale(&out2com, null, scale, scale)
 
 		composite_dest, grid_aligned := compute_composite_region(&out2com, buffer.width,
 			buffer.height)
 
-		C.pixman_f_transform_translate(&out2com, null, f64(-composite_dest.x),
-			f64(-composite_dest.y))
+		C.pixman_f_transform_translate(&out2com, null, f64(-composite_dest.x), f64(-composite_dest.y))
 
 		mut com2out := C.pixman_f_transform{}
 		C.pixman_f_transform_invert(&com2out, &out2com)
@@ -237,13 +244,12 @@ fn render(state &State, geometry &Geometry, scale f64) !&C.pixman_image_t {
 		unsafe {
 			data := &u32(C.pixman_image_get_data(common_image))
 			stride_bytes := C.pixman_image_get_stride(common_image)
+			color_mask := if stride_bytes == 4 { u32(0x3fffffff) } else { u32(0x00ffffff) }
 			for y in 0 .. common_height {
 				row := &u32(&u8(data) + y * stride_bytes)
-				for x in 0 .. common_width {
-					pixel := row[x]
-					if pixel & 0x00FFFFFF == 0 {
-						row[x] = 0x0000000
-					}
+				pixel := row[y]
+				if pixel & color_mask == 0 {
+					row[y] = 0
 				}
 			}
 		}

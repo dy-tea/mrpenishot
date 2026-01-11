@@ -1,5 +1,6 @@
 module main
 
+@[direct_array_access]
 fn encode_ppm(image &C.pixman_image_t) []u8 {
 	width := C.pixman_image_get_width(image)
 	height := C.pixman_image_get_height(image)
@@ -10,7 +11,7 @@ fn encode_ppm(image &C.pixman_image_t) []u8 {
 
 	format := C.pixman_image_get_format(image)
 	if format !in [.a8r8g8b8, .x8r8g8b8] {
-		panic('Unsupported format')
+		panic('PPM only supports up to 8 bit color depth')
 	}
 
 	pixels := C.pixman_image_get_data(image)

@@ -19,6 +19,15 @@ v run build.vsh  # generate protocols
 v .              # build
 ```
 
+### Features
+- Screenshot all outputs
+- Screenshot specific output
+- Screenshot specific region
+- Screenshot specific toplevel
+- Include or exclude cursor
+- PNG, JXL, QOI and PPM support
+- HDR support (currently PNG only)
+
 ### Usage
 ```sh
 mrpenishot                                      # all outputs

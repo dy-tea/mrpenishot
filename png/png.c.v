@@ -62,6 +62,12 @@ pub fn C.png_create_info_struct(png_ptr C.png_structp) C.png_infop
 
 pub fn C.png_init_io(png_ptr C.png_structp, fp voidptr)
 
+pub fn C.png_set_sRGB(png_ptr C.png_structp, info C.png_infop, srgb_intent int)
+
+pub fn C.png_set_gAMA_fixed(png_ptr C.png_structp, info C.png_infop, gamma u32)
+
+pub fn C.png_set_cICP(png_ptr C.png_structp, info C.png_infop, colour_primaries u8, transfer_function u8, matrix_coefficients u8, video_full_range_flag u8)
+
 pub fn C.png_set_IHDR(png_ptr C.png_structp, info_ptr C.png_infop, width u32, height u32, bit_depth int, color_type int, interlace_method int, compression_method int, filter_method int)
 
 pub fn C.png_write_info(png_ptr C.png_structp, info_ptr C.png_infop)
