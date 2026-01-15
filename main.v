@@ -10,7 +10,7 @@ import protocols.ext_image_copy_capture_v1 as cc
 
 #pkgconfig wayland-client
 
-const mrpenishot_version = '1.1.0'
+const mrpenishot_version = '1.2.0'
 const supported_formats = ['png', 'ppm', 'qoi', 'jxl']
 
 fn (mut state State) capture_output(output &Output, include_cursor bool) {
