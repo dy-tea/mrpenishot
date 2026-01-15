@@ -2,6 +2,7 @@ module main
 
 import math
 import protocols.wayland as wlp
+import protocols.color_management_v1 as cm
 import protocols.xdg_output_unstable_v1 as xo
 import protocols.ext_image_copy_capture_v1 as cc
 import protocols.ext_image_capture_source_v1 as cs
@@ -24,6 +25,10 @@ fn registry_handle_global(mut state State, registry voidptr, name u32, iface &ch
 			}
 			output.wl_output.add_listener(&output_listener, output)
 			state.outputs << output
+		}
+		cm.wp_color_manager_v1_interface_name {
+			state.wp_color_manager_v1 = &cm.WpColorManagerV1{state.registry.bind(name,
+				cm.wp_color_manager_v1_interface_ptr(), 1)}
 		}
 		xo.zxdg_output_manager_v1_interface_name {
 			bind_version := math.min(version, 2)

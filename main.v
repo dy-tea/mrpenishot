@@ -174,6 +174,19 @@ fn main() {
 		}
 	}
 
+	// init color management for outputs
+	if mut color_manager := state.wp_color_manager_v1 {
+		for mut output in state.outputs {
+			mut cm_output := color_manager.get_output(output.wl_output.proxy)
+			cm_output.add_listener(&cm_output_listener, state)
+			mut description := cm_output.get_image_description()
+      description.add_listener(&cm_image_description_listener, output.state)
+      if C.wl_display_roundtrip(display_proxy) < 0 {
+        panic('wl_display_roundtrip failed')
+      }
+		}
+	}
+
 	// grab geometry from output name
 	if output_name != '' {
 		matching := state.outputs.filter(fn [output_name] (o Output) bool {
@@ -213,29 +226,33 @@ fn main() {
 
 	// dispatch captures
 	mut done := false
-	for !done && C.wl_display_dispatch(display_proxy) != -1 {
-		done = state.n_done == state.captures.len
+	expected_cm := if state.wp_color_manager_v1 != none { state.outputs.len } else { 0 }
+	for !done && C.wl_display_dispatch(display_proxy) != -1{
+		done = state.n_done == state.captures.len && state.n_cm_done >= expected_cm
 	}
 	if geometry == Geometry{0, 0, 0, 0} {
 		geometry = state.get_extents()
 	}
 
+	// opacity only needed if there are toplevels
+	fully_opaque := !state.captures.any(it.toplevel != none)
+
 	// render image
-	image := render(&state, geometry, scale) or { panic(err) }
+	image := render(&state, geometry, scale, fully_opaque) or { panic(err) }
 
 	// encode image
 	encoded := match image_format {
 		'png' {
-			png.encode_png(image)!
+			png.encode_png(image, fully_opaque, state.is_hdr)!
 		}
 		'ppm' {
-			encode_ppm(image)
+			encode_ppm(image, state.is_hdr)
 		}
 		'qoi' {
-			qoi.encode_qoi(image)!
+			qoi.encode_qoi(image, fully_opaque, state.is_hdr)!
 		}
 		'jxl' {
-			jxl.encode_jxl(image)!
+			jxl.encode_jxl(image, fully_opaque, state.is_hdr)!
 		}
 		else {
 			panic('ERROR: unrecognized image format `${image_format}` not in ${supported_formats}')
@@ -266,6 +283,9 @@ fn main() {
 	for mut output in state.outputs {
 		if mut xdg := output.xdg_output {
 			xdg.destroy()
+		}
+		if mut cm_output := output.cm_output {
+			cm_output.destroy()
 		}
 		output.wl_output.release()
 	}

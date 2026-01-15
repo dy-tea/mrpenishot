@@ -3,10 +3,10 @@ module main
 import math
 import protocols.wayland as wlp
 import pixman as px
-import arrays
 
 fn get_pixman_format(wl_fmt wlp.WlShm_Format) !px.Pixman_format_code_t {
 	return match wl_fmt {
+		// 32-bit formats
 		.argb8888 {
 			px.Pixman_format_code_t.a8r8g8b8
 		}
@@ -31,6 +31,7 @@ fn get_pixman_format(wl_fmt wlp.WlShm_Format) !px.Pixman_format_code_t {
 		.rgbx8888 {
 			px.Pixman_format_code_t.r8g8b8x8
 		}
+		// 30-bit/32-bit HDR formats
 		.argb2101010 {
 			px.Pixman_format_code_t.a2r10g10b10
 		}
@@ -43,16 +44,52 @@ fn get_pixman_format(wl_fmt wlp.WlShm_Format) !px.Pixman_format_code_t {
 		.xbgr2101010 {
 			px.Pixman_format_code_t.x2b10g10r10
 		}
+		// 24-bit formats
+		.rgb888 {
+			px.Pixman_format_code_t.r8g8b8
+		}
+		.bgr888 {
+			px.Pixman_format_code_t.b8g8r8
+		}
+		// 16-bit formats
+		.rgb565 {
+			px.Pixman_format_code_t.r5g6b5
+		}
+		.bgr565 {
+			px.Pixman_format_code_t.b5g6r5
+		}
+		.argb4444 {
+			px.Pixman_format_code_t.a4r4g4b4
+		}
+		.xrgb4444 {
+			px.Pixman_format_code_t.x4r4g4b4
+		}
+		.argb1555 {
+			px.Pixman_format_code_t.a1r5g5b5
+		}
+		.xrgb1555 {
+			px.Pixman_format_code_t.x1r5g5b5
+		}
+		// 8-bit formats
+		.rgb332 {
+			px.Pixman_format_code_t.r3g3b2
+		}
+		.bgr233 {
+			px.Pixman_format_code_t.b2g3r3
+		}
 		else {
-			error('Unsupported format')
+			error('unsupported format: ${wl_fmt}')
 		}
 	}
 }
 
-fn get_min_stride(fmt wlp.WlShm_Format, width u32) u32 {
-	format := get_pixman_format(fmt) or { px.Pixman_format_code_t.b8g8r8a8 }
+fn get_min_stride(f wlp.WlShm_Format, width u32) u32 {
+	format := get_pixman_format(f) or { px.Pixman_format_code_t.b8g8r8a8 }
 	bpp := px.pixman_format_bpp(int(format))
-	return ((width * bpp + 0x1f) >> 5) * 4
+	if bpp == 24 {
+		return width * 3
+	}
+	return ((width * bpp + 31) / 32) * 4
 }
 
 fn compute_composite_region(out2com &C.pixman_f_transform, output_width int, output_height int) (Geometry, bool) {
@@ -128,16 +165,21 @@ fn compute_composite_region(out2com &C.pixman_f_transform, output_width int, out
 }
 
 @[direct_array_access]
-fn render(state &State, geometry &Geometry, scale f64) !&C.pixman_image_t {
+fn render(state &State, geometry &Geometry, scale f64, fully_opaque bool) !&C.pixman_image_t {
 	null := unsafe { nil }
-	common_format := arrays.max(state.captures.map(fn (capture &Capture) px.Pixman_format_code_t {
-		for {
-			if buffer := capture.buffer {
-				return get_pixman_format(buffer.shm_format) or { break }
-			}
+	common_format := if state.is_hdr {
+		if fully_opaque {
+			px.Pixman_format_code_t.x2r10g10b10
+		} else {
+			px.Pixman_format_code_t.a2r10g10b10
 		}
-		return px.Pixman_format_code_t.a8r8g8b8
-	})) or { px.Pixman_format_code_t.a8r8g8b8 }
+	} else {
+		if fully_opaque {
+			px.Pixman_format_code_t.x8r8g8b8
+		} else {
+			px.Pixman_format_code_t.a8r8g8b8
+		}
+	}
 	common_width := int(geometry.width * scale)
 	common_height := int(geometry.height * scale)
 	common_image := C.pixman_image_create_bits(common_format, common_width, common_height,
@@ -146,12 +188,43 @@ fn render(state &State, geometry &Geometry, scale f64) !&C.pixman_image_t {
 		return error('failed to create image with size: ${common_width} x ${common_height}')
 	}
 
+	// make background transparent
+	transparent_color := C.pixman_color{
+    red: 0, green: 0, blue: 0, alpha: 0
+	}
+	rect := C.pixman_rectangle16{
+    x: 0
+    y: 0
+    width: u16(common_width)
+    height: u16(common_height)
+	}
+	C.pixman_image_fill_rectangles(px.Pixman_op_t.src, common_image, &transparent_color, 1, &rect)
+
 	for capture in state.captures {
 		buffer := capture.buffer or { continue }
 
-		pixman_fmt := get_pixman_format(buffer.shm_format) or {
-			return error('unsupported format ${buffer.shm_format}')
+		mut pixman_fmt := get_pixman_format(buffer.shm_format) or {
+    	return error('unsupported format ${buffer.shm_format}')
 		}
+
+		was_opaque := pixman_fmt in [.x8r8g8b8, .x8b8g8r8, .x2r10g10b10, .x2b10g10r10]
+		if capture.toplevel != none && was_opaque {
+    	pixman_fmt = match pixman_fmt {
+	      .x8r8g8b8 { px.Pixman_format_code_t.a8r8g8b8 }
+	      .x8b8g8r8 { px.Pixman_format_code_t.a8b8g8r8 }
+	      else { pixman_fmt }
+      }
+    }
+
+    unsafe {
+      mut p := &u32(buffer.data)
+      num_pixels := (buffer.stride / 4) * buffer.height
+      for i in 0 .. num_pixels {
+        if (p[i] & 0x00FFFFFF) == 0 {
+          p[i] = 0
+        }
+      }
+    }
 
 		output_x := capture.logical_geometry.x - geometry.x
 		output_y := capture.logical_geometry.y - geometry.y
@@ -222,10 +295,10 @@ fn render(state &State, geometry &Geometry, scale f64) !&C.pixman_image_t {
 			}
 		}
 
-		op := if grid_aligned && !overlapping {
-			px.Pixman_op_t.src
+		op := if capture.toplevel == none && grid_aligned && !overlapping {
+    	px.Pixman_op_t.src
 		} else {
-			px.Pixman_op_t.over
+    	px.Pixman_op_t.over
 		}
 
 		unsafe {
@@ -235,24 +308,6 @@ fn render(state &State, geometry &Geometry, scale f64) !&C.pixman_image_t {
 		}
 
 		C.pixman_image_unref(output_image)
-	}
-
-	// transpareny for toplevel
-	has_toplevel := state.captures.any(it.toplevel != none)
-	has_output := state.captures.any(it.output != none)
-	if has_toplevel && !has_output {
-		unsafe {
-			data := &u32(C.pixman_image_get_data(common_image))
-			stride_bytes := C.pixman_image_get_stride(common_image)
-			color_mask := if stride_bytes == 4 { u32(0x3fffffff) } else { u32(0x00ffffff) }
-			for y in 0 .. common_height {
-				row := &u32(&u8(data) + y * stride_bytes)
-				pixel := row[y]
-				if pixel & color_mask == 0 {
-					row[y] = 0
-				}
-			}
-		}
 	}
 
 	return common_image

@@ -1,5 +1,8 @@
 module qoi
 
+import fmt {Category}
+import packer as pk
+
 // adapted from https://github.com/418Coffee/qoi-v
 import io
 import os
@@ -242,36 +245,64 @@ fn write_all(data []u8, mut w io.Writer) ! {
 	}
 }
 
-@[direact_array_access]
-pub fn encode_qoi(image &C.pixman_image_t) ![]u8 {
+@[direct_array_access]
+pub fn encode_qoi(image &C.pixman_image_t, fully_opaque bool, is_hdr bool) ![]u8 {
 	width := C.pixman_image_get_width(image)
 	height := C.pixman_image_get_height(image)
+	stride := C.pixman_image_get_stride(image)
 	format := C.pixman_image_get_format(image)
-	pixels := C.pixman_image_get_data(image)
+	pixels := unsafe { &u8(C.pixman_image_get_data(image)) }
 
-	if format !in [.a8r8g8b8, .x8r8g8b8] {
-		return error('QOI only supports up to 8 bit color depth')
-	}
+	category := Category.new(format)
 
-	pixel_count := width * height
-	mut buffer := []u8{cap: pixel_count * 4}
+	channels := if fully_opaque { 3 } else { 4 }
+	mut buffer := []u8{}
+	row_buffer := []u8{len: int(width) * channels}
 
-	for i in 0 .. pixel_count {
-		p := unsafe { pixels[i] }
-		b := u8(p & 0xff)
-		g := u8((p >> 8) & 0xff)
-		r := u8((p >> 16) & 0xff)
-		a := u8(p >> 24)
-		buffer << r
-		buffer << g
-		buffer << b
-		buffer << a
+	match category {
+		._10c_32b {
+			if is_hdr {
+				for y in 0 .. height {
+					unsafe {
+						row_ptr := &u32(&u8(pixels) + y * stride)
+						pk.pack_row32_10_hdr_to_32_8(&u32(row_ptr), width, row_buffer.data, fully_opaque, format)
+					}
+					buffer << row_buffer
+				}
+			} else {
+				for y in 0 .. height {
+					unsafe {
+						row_ptr := &u32(&u8(pixels) + y * stride)
+						pk.pack_row32_10_to_32_8(&u32(row_ptr), width, row_buffer.data, fully_opaque, format)
+					}
+					buffer << row_buffer
+				}
+			}
+		}
+		._8c_32b {
+			for y in 0 .. height {
+				unsafe {
+					row_ptr := &u32(&u8(pixels) + y * stride)
+					pk.pack_row32_8(&u32(row_ptr), width, row_buffer.data, fully_opaque, format)
+				}
+				buffer << row_buffer
+			}
+		}
+		._8c_24b {
+			for y in 0 .. height {
+				unsafe {
+					row_ptr := &u32(&u8(pixels) + y * stride)
+					pk.pack_row24_8(&u8(row_ptr), width, row_buffer.data, format)
+				}
+			}
+			buffer << row_buffer
+		}
 	}
 
 	config := Config{
 		width:       u32(width)
 		height:      u32(height)
-		channels:    4
+		channels:    u8(channels)
 		colourspace: 0
 	}
 

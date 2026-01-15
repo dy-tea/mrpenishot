@@ -1,18 +1,17 @@
 module wl
 
-#pkgconfig wayland-client
 #include <wayland-util.h>
 
 pub struct C.wl_message {
 pub:
-	name      &char
-	signature &char
+	name      &u8
+	signature &u8
 	types     &&C.wl_interface
 }
 
 pub struct C.wl_interface {
 pub:
-	name         &char
+	name         &u8
 	version      int
 	method_count int
 	// methods &C.wl_message

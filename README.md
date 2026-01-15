@@ -26,7 +26,7 @@ v .              # build
 - Screenshot specific toplevel
 - Include or exclude cursor
 - PNG, JXL, QOI and PPM support
-- HDR support (currently PNG only)
+- HDR support
 
 ### Usage
 ```sh

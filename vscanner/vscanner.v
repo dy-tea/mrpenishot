@@ -294,14 +294,20 @@ fn parse_enum(xml string) Enum {
 	mut pos := 0
 	for {
 		start := xml.index_after('<entry', pos) or { break }
-		end := xml.index_after('/>', start) or { break }
-		entry_xml := xml[start - 6..end + 2]
+		tag_end := xml.index_after('>', start) or { break }
+		entry_tag_content := xml[start - 6..tag_end + 1]
+
 		entries << EnumEntry{
-			name:    extract_attr(entry_xml, '<entry', 'name')
-			value:   extract_attr(entry_xml, '<entry', 'value')
-			summary: extract_attr(entry_xml, '<entry', 'summary')
+			name:    extract_attr(entry_tag_content, '<entry', 'name')
+			value:   extract_attr(entry_tag_content, '<entry', 'value')
+			summary: extract_attr(entry_tag_content, '<entry', 'summary')
 		}
-		pos = end + 2
+
+		pos = if closing_choice := xml.index_after('</entry>', tag_end) {
+			closing_choice + 8
+		} else {
+			tag_end + 1
+		}
 	}
 
 	return Enum{
@@ -346,11 +352,14 @@ fn generate_v_code(protocol Protocol) string {
 		out += '#pkgconfig wayland-client\n'
 		out += '#include <wayland-client-protocol.h>\n\n'
 	} else {
+		out += 'import protocols.wayland\n\n'
 		out += '#pkgconfig wayland-client\n'
 		out += '#include <wayland-client.h>\n'
 		out += '#include "${module_name}-client-protocol.h"\n'
 		out += '#flag -I @VMODROOT/protocols/${module_name}\n'
 		out += '#flag @VMODROOT/protocols/${module_name}/${module_name}-protocol.c\n\n'
+		// if the protocol does not use wayland it will warn about the unused import
+		out += '\nconst _remove_module_import_warning = wayland.wl_display_interface_name'
 	}
 	for iface in protocol.interfaces {
 		interface_var_name := '${iface.name}_interface'
@@ -470,7 +479,10 @@ fn generate_enum(iface Interface, enum_def Enum) string {
 		for entry in enum_def.entries {
 			entry_name := sanitize_enum_entry_name(entry.name)
 			if entry.summary != '' {
-				out += '\t// ${entry.summary}\n'
+				lines := entry.summary.trim_space().split('\n')
+				for line in lines {
+					out += '\t// ${line.trim_space()}\n'
+				}
 			}
 			out += '\t${entry_name} = ${entry.value}\n'
 		}
@@ -652,7 +664,9 @@ fn arg_type_to_v(arg Arg) string {
 			'voidptr'
 		}
 		'new_id' {
-			if arg.interface_name != '' {
+			if arg.interface_name.starts_with('wl_') {
+				'&wl.${snake_to_pascal(arg.interface_name)}'
+			} else if arg.interface_name != '' {
 				'&${snake_to_pascal(arg.interface_name)}'
 			} else {
 				'voidptr'
@@ -676,7 +690,10 @@ fn generate_request_method(iface Interface, request Message, opcode int) string 
 
 	mut out := ''
 	if request.description != '' {
-		out += '// ${request.description}\n'
+		lines := request.description.trim_space().split('\n')
+		for line in lines {
+			out += '// ${line.trim_space()}\n'
+		}
 	}
 
 	mut params := []string{}
@@ -700,71 +717,63 @@ fn generate_request_method(iface Interface, request Message, opcode int) string 
 			params << '${param_name} ${param_type}'
 
 			call_args << match arg.typ {
-				'object' {
-					param_name
-				}
-				'string' {
-					'voidptr(${param_name}.str)'
-				}
-				else {
-					param_name
-				}
+				'object' { param_name }
+				'string' { 'voidptr(${param_name}.str)' }
+				else { param_name }
 			}
 		}
+	}
+
+	// Signature and Return Type
+	new_id_arg_name := if new_id_arg.interface_name != '' {
+		if new_id_arg.interface_name.starts_with('wl_') && !iface.name.starts_with('wl_') {
+			' &wayland.${snake_to_pascal(new_id_arg.interface_name)}'
+		} else {
+			' &${snake_to_pascal(new_id_arg.interface_name)}'
+		}
+	} else {
+		' voidptr'
 	}
 
 	out += 'pub fn (mut self ${struct_name}) ${method_name}('
 	out += params.join(', ')
 	out += ')'
-
-	if has_new_id {
-		out += if new_id_arg.interface_name != '' {
-			' &${snake_to_pascal(new_id_arg.interface_name)}'
-		} else {
-			' voidptr'
-		}
-	}
-
+	if has_new_id { out += new_id_arg_name }
 	out += ' {\n'
 
-	if request.is_destructor {
-		out += '\tC.wl_proxy_marshal_flags(unsafe { &C.wl_proxy(self.proxy) }, ${opcode}, unsafe { nil }, '
-		out += 'C.wl_proxy_get_version(unsafe { &C.wl_proxy(self.proxy) }), wl.wl_marshal_flag_destroy'
-		if call_args.len > 0 {
-			out += ', ${call_args.join(', ')}'
-		}
-		out += ')\n'
-	} else if has_new_id {
+	// Main logic: Handle marshaling and returns
+	if has_new_id {
 		if new_id_arg.interface_name != '' {
+			// Case 1: Known interface return (e.g., get_registry)
 			out += '\tproxy := C.wl_proxy_marshal_flags(unsafe { &C.wl_proxy(self.proxy) }, ${opcode}, '
-			out += '${new_id_arg.interface_name}_interface_ptr(), '
-			out += 'C.wl_proxy_get_version(unsafe { &C.wl_proxy(self.proxy) }), 0, unsafe { nil }'
-			out += if call_args.len > 0 {
-				', ${call_args.join(', ')}'
+			if new_id_arg.interface_name.starts_with('wl_') && !iface.name.starts_with('wl_') {
+				out += 'wayland.${new_id_arg.interface_name}_interface_ptr(), '
 			} else {
-				''
+				out += '${new_id_arg.interface_name}_interface_ptr(), '
 			}
-		} else {
-			out += '\tproxy := C.wl_proxy_marshal_flags(unsafe { &C.wl_proxy(self.proxy) }, ${opcode}, '
-			out += 'unsafe { &C.wl_interface(iface) }, version, 0'
-			out += if call_args.len > 0 {
-				', ${call_args.join(', ')}, unsafe { nil }'
-			} else {
-				', unsafe { nil }'
-			}
-		}
-		out += ')\n'
+			out += 'C.wl_proxy_get_version(unsafe { &C.wl_proxy(self.proxy) }), '
+			out += if request.is_destructor { 'wl.wl_marshal_flag_destroy, ' } else { '0, ' }
+			out += 'unsafe { nil }'
+			out += if call_args.len > 0 { ', ${call_args.join(', ')}' } else { '' }
+			out += ')\n'
 
-		if new_id_arg.interface_name != '' {
-			out += '\treturn &${snake_to_pascal(new_id_arg.interface_name)}{\n'
+			out += '\treturn &${new_id_arg_name.trim_space()[1..]}{\n'
 			out += '\t\tproxy: proxy\n'
 			out += '\t}\n'
 		} else {
+			// Case 2: Generic new_id return (e.g., wl_registry.bind)
+			out += '\tproxy := C.wl_proxy_marshal_flags(unsafe { &C.wl_proxy(self.proxy) }, ${opcode}, '
+			out += 'unsafe { &C.wl_interface(iface) }, version, '
+			out += if request.is_destructor { 'wl.wl_marshal_flag_destroy' } else { '0' }
+			out += if call_args.len > 0 { ', ${call_args.join(', ')}, unsafe { nil }' } else { ', unsafe { nil }' }
+			out += ')\n'
 			out += '\treturn proxy\n'
 		}
 	} else {
+		// Case 3: No return value
 		out += '\tC.wl_proxy_marshal_flags(unsafe { &C.wl_proxy(self.proxy) }, ${opcode}, unsafe { nil }, '
-		out += 'C.wl_proxy_get_version(unsafe { &C.wl_proxy(self.proxy) }), 0'
+		out += 'C.wl_proxy_get_version(unsafe { &C.wl_proxy(self.proxy) }), '
+		out += if request.is_destructor { 'wl.wl_marshal_flag_destroy' } else { '0' }
 		if call_args.len > 0 {
 			out += ', ${call_args.join(', ')}'
 		}
@@ -772,7 +781,6 @@ fn generate_request_method(iface Interface, request Message, opcode int) string 
 	}
 
 	out += '}\n'
-
 	return out
 }
 

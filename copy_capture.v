@@ -36,11 +36,10 @@ fn session_handle_buffer_size(mut capture Capture, session &cc.ExtImageCopyCaptu
 
 fn session_handle_shm_format(mut capture Capture, session &cc.ExtImageCopyCaptureSessionV1, format u32) {
 	fmt := unsafe { wlp.WlShm_Format(format) }
-	alpha_formats := [wlp.WlShm_Format.argb8888, .abgr8888, .bgra8888, .rgba8888, .argb2101010, .abgr2101010]
 	is_toplevel := capture.toplevel != none
 	if current_fmt := capture.shm_format {
-		if is_toplevel && fmt in alpha_formats {
-			if current_fmt !in alpha_formats {
+		if is_toplevel && is_alpha_format(fmt) {
+			if !is_alpha_format(current_fmt) {
 				get_pixman_format(fmt) or { return }
 				capture.shm_format = fmt
 			}
@@ -81,4 +80,9 @@ const session_listener = C.ext_image_copy_capture_session_v1_listener{
 	dmabuf_format: fn (_ voidptr, _ voidptr, _ u32, _ voidptr) {}
 	done:          session_handle_done
 	stopped:       fn (_ voidptr, _ voidptr) {}
+}
+
+fn is_alpha_format(format wlp.WlShm_Format) bool {
+	alpha_formats := [wlp.WlShm_Format.argb8888, .abgr8888, .bgra8888, .rgba8888, .argb2101010, .abgr2101010]
+	return format in alpha_formats
 }

@@ -28,7 +28,16 @@ pub fn linear_to_srgb_16(lin f64) u16 {
 	return u16(math.max(0.0, math.min(1.0, s)) * 65535.0)
 }
 
-@[inline]
+pub fn linear_to_srgb_8(lin f64) u8 {
+	mut s := lin * 50.0 // this might be per-display
+	s = if s <= 0.0031308 {
+		s * 12.92
+	} else {
+		1.055 * math.pow(s, 1.0 / 2.4) - 0.055
+	}
+	return u8(math.max(0.0, math.min(1.0, s)) * 255.0)
+}
+
 pub fn apply_bt2020_to_srgb(r f64, g f64, b f64) (f64, f64, f64) {
 	return 1.6605 * r - 0.5876 * g - 0.0728 * b, -0.1246 * r + 1.1329 * g - 0.0083 * b,
 		-0.0182 * r - 0.1006 * g + 1.1188 * b
