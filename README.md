@@ -2,7 +2,7 @@
 
 _Wayland screenshot application written in the V programming language_
 
-![mrpenishot](https://avatars.githubusercontent.com/u/165158232)
+![mrpenishot](repository/mrpenishot.png)
 
 ### Dependencies
 - [V compiler](https://vlang.io/)
