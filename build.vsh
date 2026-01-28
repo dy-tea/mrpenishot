@@ -45,7 +45,7 @@ if arguments().contains('clean') {
 program_installed('pkg-config')
 program_installed('wayland-scanner')
 
-pkg_installed('wayland-protocols', 1.37)
+pkg_installed('wayland-protocols', 1.41)
 pkg_installed('wayland-client', none)
 pkg_installed('pixman-1', none)
 pkg_installed('libjxl', none)

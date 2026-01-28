@@ -18,11 +18,36 @@ jobs:
 
       - name: Install deps
         run: |
-          sudo apt install wayland-utils   \
-          wayland-protocols libwayland-dev \
-          libpixman-1-dev libjxl-dev libpng-dev
+          sudo apt install wayland-utils graphviz \
+          libpixman-1-dev libjxl-dev libpng-dev meson
+
+      - name: Install libpng16
+        run: |
+          curl https://unlimited.dl.sourceforge.net/project/libpng/libpng16/1.6.54/libpng-1.6.54.tar.xz?viasf=1 -o libpng.tar.xz
+          xz -d libpng.tar.xz
+          tar xf libpng.tar
+          cd libpng-1.6.54
+          ./configure --prefix=/usr
+          make check
+          sudo make install
+
+      - name: Install wayland
+        run: |
+          git clone https://gitlab.freedesktop.org/wayland/wayland.git
+          cd wayland
+          meson setup build --buildtype=release --prefix=/usr -Dtests=false -Ddocumentation=false
+          sudo ninja -C build install
+
+      - name: Install wayland-protocols
+        run: |
+          git clone https://gitlab.freedesktop.org/wayland/wayland-protocols.git
+          cd wayland-protocols
+          meson setup build --buildtype=release --prefix=/usr/local
+          sudo ninja -C build install
 
       - name: Build
         run: |
+          export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+          export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
           v run build.vsh
           v -prod .
