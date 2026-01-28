@@ -1,5 +1,6 @@
 import os
 import flag
+import strings { Builder }
 
 @[xdoc: 'vscanner - Generate V bindings from Wayland protocol XML files']
 @[version: '1.0.0']
@@ -338,158 +339,147 @@ fn extract_attr(xml string, tag string, attr string) string {
 }
 
 fn generate_v_code(protocol Protocol) string {
-	mut out := ''
+	mut out := Builder{}
 
 	if protocol.copyright != '' {
-		out += '/*\n${protocol.copyright}\n*/\n\n'
+		out.writeln('/*\n${protocol.copyright}\n*/\n')
 	}
 
 	module_name := protocol.name.replace('-', '_')
-	out += 'module ${module_name}\n\n'
-	out += 'import wl\n\n'
+	out.writeln('module ${module_name}\n')
+	out.writeln('import wl\n')
 
 	if protocol.name == 'wayland' {
-		out += '#pkgconfig wayland-client\n'
-		out += '#include <wayland-client-protocol.h>\n\n'
+		out.writeln2('#pkgconfig wayland-client', '#include <wayland-client-protocol.h>\n')
 	} else {
-		out += 'import protocols.wayland\n\n'
-		out += '#pkgconfig wayland-client\n'
-		out += '#include <wayland-client.h>\n'
-		out += '#include "${module_name}-client-protocol.h"\n'
-		out += '#flag -I @VMODROOT/protocols/${module_name}\n'
-		out += '#flag @VMODROOT/protocols/${module_name}/${module_name}-protocol.c\n\n'
-		// if the protocol does not use wayland it will warn about the unused import
-		out += '\nconst _remove_module_import_warning = wayland.wl_display_interface_name'
+		out.writeln('import protocols.wayland\n
+#pkgconfig wayland-client
+#include <wayland-client.h>
+#include "${module_name}-client-protocol.h"
+#flag -I @VMODROOT/protocols/${module_name}
+#flag @VMODROOT/protocols/${module_name}/${module_name}-protocol.c\n
+const _remove_module_import_warning = wayland.wl_display_interface_name')
 	}
 	for iface in protocol.interfaces {
 		interface_var_name := '${iface.name}_interface'
-		out += '@[inline]\n'
-		out += 'pub fn ${interface_var_name}_ptr() voidptr {\n'
-		out += '\treturn unsafe { voidptr(&C.${interface_var_name}) }\n'
-		out += '}\n\n'
+		out.writeln('@[inline]
+pub fn ${interface_var_name}_ptr() voidptr {
+\treturn unsafe { voidptr(&C.${interface_var_name}) }
+}\n')
 	}
 	for iface in protocol.interfaces {
 		interface_var_name := '${iface.name}_interface'
-		out += 'pub const ${interface_var_name}_name = \'${iface.name}\'\n'
+		out.writeln('pub const ${interface_var_name}_name = \'${iface.name}\'')
 	}
-	out += '\n'
+	out.writeln('')
 
 	for iface in protocol.interfaces {
-		out += generate_interface(iface)
-		out += '\n'
+		out.writeln(generate_interface(iface))
 	}
 
-	return out
+	return out.str()
 }
 
 fn generate_interface_constant(iface Interface) string {
-	mut out := ''
+	mut out := Builder{}
 
 	interface_var_name := '${iface.name}_interface'
-
-	out += 'pub const ${interface_var_name} = wl.Interface{\n'
-	out += '\tname: \'${iface.name}\'\n'
-	out += '\tversion: ${iface.version}\n'
-	out += '\tmethod_count: ${iface.requests.len}\n'
+	out.writeln('pub const ${interface_var_name} = wl.Interface{
+\tname: \'${iface.name}\'
+\tversion: ${iface.version}
+\tmethod_count: ${iface.requests.len}')
 
 	if iface.requests.len > 0 {
-		out += '\tmethods: [\n'
+		out.writeln('\tmethods: [')
 		for request in iface.requests {
 			signature := get_signature(request.args)
-			out += '\t\twl.Message{\n'
-			out += '\t\t\tname: \'${request.name}\'\n'
-			out += '\t\t\tsignature: \'${signature}\'\n'
-			out += '\t\t\ttypes: ${generate_types_array(request.args)}\n'
-			out += '\t\t}\n'
+			out.writeln('\t\twl.Message{
+\t\t\tname: \'${request.name}\'
+\t\t\tsignature: \'${signature}\'
+\t\t\ttypes: ${generate_types_array(request.args)}
+\t\t}')
 		}
-		out += '\t]\n'
+		out.writeln('\t]')
 	} else {
-		out += '\tmethods: []\n'
+		out.writeln('\tmethods: []')
 	}
 
-	out += '\tevent_count: ${iface.events.len}\n'
+	out.writeln('\tevent_count: ${iface.events.len}')
 
 	if iface.events.len > 0 {
-		out += '\tevents: [\n'
+		out.writeln('\tevents: [')
 		for event in iface.events {
 			signature := get_signature(event.args)
-			out += '\t\twl.Message{\n'
-			out += '\t\t\tname: \'${event.name}\'\n'
-			out += '\t\t\tsignature: \'${signature}\'\n'
-			out += '\t\t\ttypes: ${generate_types_array(event.args)}\n'
-			out += '\t\t}\n'
+			out.writeln('\t\twl.Message{
+\t\t\tname: \'${event.name}\'
+\t\t\tsignature: \'${signature}\'
+\t\t\ttypes: ${generate_types_array(event.args)}
+\t\t}')
 		}
-		out += '\t]\n'
+		out.writeln('\t]')
 	} else {
-		out += '\tevents: []\n'
+		out.writeln('\tevents: []')
 	}
 
-	out += '}\n'
+	out.writeln('}')
 
-	return out
+	return out.str()
 }
 
 fn generate_interface(iface Interface) string {
-	mut out := ''
+	mut out := Builder{}
 
 	for enum_def in iface.enums {
-		out += generate_enum(iface, enum_def)
-		out += '\n'
+		out.writeln(generate_enum(iface, enum_def))
 	}
 
-	out += generate_struct(iface)
-	out += '\n'
+	out.writeln(generate_struct(iface))
 
 	if iface.events.len > 0 {
-		out += generate_listener(iface)
-		out += '\n'
-		out += generate_add_listener(iface)
-		out += '\n'
+		out.writeln2(generate_listener(iface), generate_add_listener(iface))
 	}
 
 	if iface.requests.len > 0 {
-		out += generate_request_constants(iface)
-		out += '\n'
+		out.writeln(generate_request_constants(iface))
 	}
 
 	for i, request in iface.requests {
-		out += generate_request_method(iface, request, i)
-		out += '\n'
+		out.writeln(generate_request_method(iface, request, i))
 	}
 
-	out += generate_helper_methods(iface)
+	out.writeln(generate_helper_methods(iface))
 
-	return out
+	return out.str()
 }
 
 fn generate_enum(iface Interface, enum_def Enum) string {
-	mut out := ''
+	mut out := Builder{}
 
 	if enum_def.description != '' {
-		out += '// ${enum_def.description}\n'
+		out.writeln('// ${enum_def.description}')
 	}
 
 	struct_name := snake_to_pascal(iface.name)
 	enum_name := '${struct_name}_${snake_to_pascal(enum_def.name)}'
 
-	out += 'pub enum ${enum_name} {\n'
+	out.writeln('pub enum ${enum_name} {')
 	if enum_def.entries.len == 0 {
-		out += '\t_placeholder = 0\n'
+		out.writeln('\t_placeholder = 0')
 	} else {
 		for entry in enum_def.entries {
 			entry_name := sanitize_enum_entry_name(entry.name)
 			if entry.summary != '' {
 				lines := entry.summary.trim_space().split('\n')
 				for line in lines {
-					out += '\t// ${line.trim_space()}\n'
+					out.writeln('\t// ${line.trim_space()}')
 				}
 			}
-			out += '\t${entry_name} = ${entry.value}\n'
+			out.writeln('\t${entry_name} = ${entry.value}')
 		}
 	}
-	out += '}\n'
+	out.writeln('}')
 
-	return out
+	return out.str()
 }
 
 fn sanitize_enum_entry_name(name string) string {
@@ -546,24 +536,24 @@ fn get_signature(args []Arg) string {
 fn generate_struct(iface Interface) string {
 	struct_name := snake_to_pascal(iface.name)
 
-	mut out := ''
+	mut out := Builder{}
 	if iface.description != '' {
-		out += '// ${iface.description}\n'
+		out.writeln('// ${iface.description}')
 	}
-	out += 'pub struct ${struct_name} {\n'
-	out += 'pub mut:\n'
-	out += '\tproxy voidptr\n'
-	out += '}\n'
+	out.writeln('pub struct ${struct_name} {
+pub mut:
+\tproxy voidptr
+}')
 
-	return out
+	return out.str()
 }
 
 fn generate_listener(iface Interface) string {
 	_ := snake_to_pascal(iface.name) // unused
 	listener_name := 'C.${iface.name}_listener'
 
-	mut out := ''
-	out += 'pub struct ${listener_name} {\n'
+	mut out := Builder{}
+	out.writeln('pub struct ${listener_name} {')
 
 	for event in iface.events {
 		method_name := event.name.replace('-', '_')
@@ -577,59 +567,49 @@ fn generate_listener(iface Interface) string {
 		}
 
 		if event.description != '' {
-			out += '\t// ${event.description}\n'
+			out.writeln('\t// ${event.description}')
 		}
-		out += '\t${method_name} fn (${params.join(', ')})\n'
+		out.writeln('\t${method_name} fn (${params.join(', ')})')
 	}
 
-	out += '}\n'
+	out.writeln('}')
 
-	return out
+	return out.str()
 }
 
 fn generate_add_listener(iface Interface) string {
 	struct_name := snake_to_pascal(iface.name)
 	listener_name := 'C.${iface.name}_listener'
 
-	mut out := ''
-	out += 'pub fn (mut self ${struct_name}) add_listener(listener &${listener_name}, data voidptr) int {\n'
-	out += '\treturn C.wl_proxy_add_listener(unsafe { &C.wl_proxy(self.proxy) }, unsafe { voidptr(listener) }, data)\n'
-	out += '}\n'
-
-	return out
+	return 'pub fn (mut self ${struct_name}) add_listener(listener &${listener_name}, data voidptr) int {
+\treturn C.wl_proxy_add_listener(unsafe { &C.wl_proxy(self.proxy) }, unsafe { voidptr(listener) }, data)
+}'
 }
 
 fn generate_request_constants(iface Interface) string {
-	mut out := ''
+	mut out := Builder{}
 
 	for i, request in iface.requests {
 		const_name := '${iface.name}_${request.name}'.to_lower()
-		out += 'pub const ${const_name} = ${i}\n'
+		out.writeln('pub const ${const_name} = ${i}')
 	}
 
-	return out
+	return out.str()
 }
 
 fn generate_helper_methods(iface Interface) string {
 	struct_name := snake_to_pascal(iface.name)
-	mut out := ''
+	return 'pub fn (mut self ${struct_name}) set_user_data(data voidptr) {
+\tC.wl_proxy_set_user_data(unsafe { &C.wl_proxy(self.proxy) }, data)
+}
 
-	// set_user_data
-	out += 'pub fn (mut self ${struct_name}) set_user_data(data voidptr) {\n'
-	out += '\tC.wl_proxy_set_user_data(unsafe { &C.wl_proxy(self.proxy) }, data)\n'
-	out += '}\n\n'
+pub fn (self ${struct_name}) get_user_data() voidptr {
+\treturn C.wl_proxy_get_user_data(unsafe { &C.wl_proxy(self.proxy) })
+}
 
-	// get_user_data
-	out += 'pub fn (self ${struct_name}) get_user_data() voidptr {\n'
-	out += '\treturn C.wl_proxy_get_user_data(unsafe { &C.wl_proxy(self.proxy) })\n'
-	out += '}\n\n'
-
-	// get_version
-	out += 'pub fn (self ${struct_name}) get_version() u32 {\n'
-	out += '\treturn C.wl_proxy_get_version(unsafe { &C.wl_proxy(self.proxy) })\n'
-	out += '}\n\n'
-
-	return out
+pub fn (self ${struct_name}) get_version() u32 {
+\treturn C.wl_proxy_get_version(unsafe { &C.wl_proxy(self.proxy) })
+}'
 }
 
 fn arg_type_to_c(arg Arg) string {
@@ -688,11 +668,11 @@ fn generate_request_method(iface Interface, request Message, opcode int) string 
 	struct_name := snake_to_pascal(iface.name)
 	method_name := request.name.replace('-', '_')
 
-	mut out := ''
+	mut out := Builder{}
 	if request.description != '' {
 		lines := request.description.trim_space().split('\n')
 		for line in lines {
-			out += '// ${line.trim_space()}\n'
+			out.writeln('// ${line.trim_space()}')
 		}
 	}
 
@@ -735,53 +715,46 @@ fn generate_request_method(iface Interface, request Message, opcode int) string 
 		' voidptr'
 	}
 
-	out += 'pub fn (mut self ${struct_name}) ${method_name}('
-	out += params.join(', ')
-	out += ')'
-	if has_new_id { out += new_id_arg_name }
-	out += ' {\n'
+	out.writeln('pub fn (mut self ${struct_name}) ${method_name}(')
+	out.write_string2(params.join(', '), ')')
+	if has_new_id { out.write_string(new_id_arg_name) }
+	out.writeln(' {')
 
-	// Main logic: Handle marshaling and returns
 	if has_new_id {
 		if new_id_arg.interface_name != '' {
-			// Case 1: Known interface return (e.g., get_registry)
-			out += '\tproxy := C.wl_proxy_marshal_flags(unsafe { &C.wl_proxy(self.proxy) }, ${opcode}, '
+			out.write_string('\tproxy := C.wl_proxy_marshal_flags(unsafe { &C.wl_proxy(self.proxy) }, ${opcode}, ')
 			if new_id_arg.interface_name.starts_with('wl_') && !iface.name.starts_with('wl_') {
-				out += 'wayland.${new_id_arg.interface_name}_interface_ptr(), '
+				out.write_string('wayland.${new_id_arg.interface_name}_interface_ptr(), ')
 			} else {
-				out += '${new_id_arg.interface_name}_interface_ptr(), '
+				out.write_string('${new_id_arg.interface_name}_interface_ptr(), ')
 			}
-			out += 'C.wl_proxy_get_version(unsafe { &C.wl_proxy(self.proxy) }), '
-			out += if request.is_destructor { 'wl.wl_marshal_flag_destroy, ' } else { '0, ' }
-			out += 'unsafe { nil }'
-			out += if call_args.len > 0 { ', ${call_args.join(', ')}' } else { '' }
-			out += ')\n'
+			out.write_string('C.wl_proxy_get_version(unsafe { &C.wl_proxy(self.proxy) }), ')
+			out.write_string(if request.is_destructor { 'wl.wl_marshal_flag_destroy, ' } else { '0, ' })
+			out.write_string('unsafe { nil }')
+			out.write_string(if call_args.len > 0 { ', ${call_args.join(', ')}' } else { '' })
+			out.writeln(')')
 
-			out += '\treturn &${new_id_arg_name.trim_space()[1..]}{\n'
-			out += '\t\tproxy: proxy\n'
-			out += '\t}\n'
+			out.writeln('\treturn &${new_id_arg_name.trim_space()[1..]}{
+\t\tproxy: proxy
+\t}')
 		} else {
-			// Case 2: Generic new_id return (e.g., wl_registry.bind)
-			out += '\tproxy := C.wl_proxy_marshal_flags(unsafe { &C.wl_proxy(self.proxy) }, ${opcode}, '
-			out += 'unsafe { &C.wl_interface(iface) }, version, '
-			out += if request.is_destructor { 'wl.wl_marshal_flag_destroy' } else { '0' }
-			out += if call_args.len > 0 { ', ${call_args.join(', ')}, unsafe { nil }' } else { ', unsafe { nil }' }
-			out += ')\n'
-			out += '\treturn proxy\n'
+			out.write_string('\tproxy := C.wl_proxy_marshal_flags(unsafe { &C.wl_proxy(self.proxy) }, ${opcode}, unsafe { &C.wl_interface(iface) }, version, ')
+			out.write_string(if request.is_destructor { 'wl.wl_marshal_flag_destroy' } else { '0' })
+			out.write_string(if call_args.len > 0 { ', ${call_args.join(', ')}, unsafe { nil }' } else { ', unsafe { nil }' })
+			out.writeln(')')
+			out.writeln('\treturn proxy')
 		}
 	} else {
-		// Case 3: No return value
-		out += '\tC.wl_proxy_marshal_flags(unsafe { &C.wl_proxy(self.proxy) }, ${opcode}, unsafe { nil }, '
-		out += 'C.wl_proxy_get_version(unsafe { &C.wl_proxy(self.proxy) }), '
-		out += if request.is_destructor { 'wl.wl_marshal_flag_destroy' } else { '0' }
+		out.write_string('\tC.wl_proxy_marshal_flags(unsafe { &C.wl_proxy(self.proxy) }, ${opcode}, unsafe { nil }, C.wl_proxy_get_version(unsafe { &C.wl_proxy(self.proxy) }), ')
+		out.write_string(if request.is_destructor { 'wl.wl_marshal_flag_destroy' } else { '0' })
 		if call_args.len > 0 {
-			out += ', ${call_args.join(', ')}'
+			out.write_string(', ${call_args.join(', ')}')
 		}
-		out += ')\n'
+		out.writeln(')')
 	}
 
-	out += '}\n'
-	return out
+	out.writeln('}')
+	return out.str()
 }
 
 fn snake_to_pascal(s string) string {
