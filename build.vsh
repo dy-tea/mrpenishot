@@ -18,15 +18,23 @@ fn program_installed(name string) {
 	}
 }
 
-fn pkg_installed(name string, version ?f64) {
-	ins := sh('pkg-config --modversion ${name}').f64()
-	if ins == 0 {
+fn pkg_installed(name string, version ?string) {
+	ins_str := sh('pkg-config --modversion ${name}')
+	ins := ins_str.trim_space().split('.').map(|x| x.int())
+	if ins.len == 0 {
 		err('package `${name}` not found')
 	} else {
 		if ver := version {
-			if ins < ver {
-				err('package `${name}` version must be >= ${ver}')
+		  	exp := ver.split('.').map(|x| x.int())
+			if exp.len != ins.len {
+			  err('package version lengths `${ver}` and `${ins_str}` differ')
 			}
+		  	for i in 0..ins.len {
+				if ins[i] > exp[i] {
+				  	return
+				}
+			}
+			err('package `${name}` version must be >= ${ver}')
 		}
 	}
 }
@@ -45,11 +53,11 @@ if arguments().contains('clean') {
 program_installed('pkg-config')
 program_installed('wayland-scanner')
 
-pkg_installed('wayland-protocols', 1.41)
+pkg_installed('wayland-protocols', '1.41')
 pkg_installed('wayland-client', none)
 pkg_installed('pixman-1', none)
 pkg_installed('libjxl', none)
-pkg_installed('libpng16', none)
+pkg_installed('libpng16', '2.5.0')
 
 // build vscanner
 sh('v ${vscanner_dir}')
@@ -59,11 +67,14 @@ wl_proto_dir := sh('pkg-config --variable=pkgdatadir wayland-protocols').trim_sp
 
 protocols := [
 	wl_dir + '/wayland.xml',
+	wl_proto_dir + '/stable/xdg-shell/xdg-shell.xml',
+	wl_proto_dir + '/stable/viewporter/viewporter.xml',
 	wl_proto_dir + '/staging/color-management/color-management-v1.xml',
 	wl_proto_dir + '/staging/ext-image-capture-source/ext-image-capture-source-v1.xml',
 	wl_proto_dir + '/staging/ext-image-copy-capture/ext-image-copy-capture-v1.xml',
 	wl_proto_dir + '/staging/ext-foreign-toplevel-list/ext-foreign-toplevel-list-v1.xml',
 	wl_proto_dir + '/unstable/xdg-output/xdg-output-unstable-v1.xml',
+	'protocols/wlr-layer-shell-unstable-v1.xml'
 ]
 
 sh('mkdir -p ${protocols_dir}')

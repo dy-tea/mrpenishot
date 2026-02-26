@@ -27,6 +27,7 @@ v .              # build
 - Include or exclude cursor
 - PNG, JXL, QOI and PPM support
 - HDR support
+- Screen freezing support
 
 ### Usage
 ```sh
@@ -39,6 +40,8 @@ mrpenishot -g "100,200 300x400"                 # geometry
 mrpenishot -g "$(slurp)"                        # geometry from slurp
 mrpenishot -t "$(awmsg t f | jq -j '.foreign')" # capture toplevel in awm
 mrpenishot - | wl-copy                          # copy image to clipboard
+mrpenishot -F 'sleep 2'                         # freeze for 2 seconds and screenshot
+mrpenishot -F '' -g '$(slurp)'                  # screenshot and freeze until slurp exits, geometry from slurp
 ```
 
 ### References

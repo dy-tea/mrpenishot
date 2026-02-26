@@ -7,6 +7,8 @@ import protocols.xdg_output_unstable_v1 as xo
 import protocols.ext_image_copy_capture_v1 as cc
 import protocols.ext_image_capture_source_v1 as cs
 import protocols.ext_foreign_toplevel_list_v1 as ft
+import protocols.viewporter as vp
+import protocols.wlr_layer_shell_unstable_v1 as ls
 
 fn registry_handle_global(mut state State, registry voidptr, name u32, iface &char, version u32) {
 	interface_name := unsafe { iface.vstring() }
@@ -15,6 +17,10 @@ fn registry_handle_global(mut state State, registry voidptr, name u32, iface &ch
 		wlp.wl_shm_interface_name {
 			state.shm = &wlp.WlShm{state.registry.bind(name, wlp.wl_shm_interface_ptr(),
 				version)}
+		}
+		wlp.wl_compositor_interface_name {
+			state.compositor = &wlp.WlCompositor{state.registry.bind(name, wlp.wl_compositor_interface_ptr(),
+				6)}
 		}
 		wlp.wl_output_interface_name {
 			mut output := &Output{
@@ -51,6 +57,14 @@ fn registry_handle_global(mut state State, registry voidptr, name u32, iface &ch
 		cc.ext_image_copy_capture_manager_v1_interface_name {
 			state.ext_image_copy_capture_manager_v1 = &cc.ExtImageCopyCaptureManagerV1{state.registry.bind(name,
 				cc.ext_image_copy_capture_manager_v1_interface_ptr(), 1)}
+		}
+		vp.wp_viewporter_interface_name {
+			state.wp_viewporter = &vp.WpViewporter{state.registry.bind(name, vp.wp_viewporter_interface_ptr(),
+				1)}
+		}
+		ls.zwlr_layer_shell_v1_interface_name {
+			state.wlr_layer_shell_v1 = &ls.ZwlrLayerShellV1{state.registry.bind(name,
+				ls.zwlr_layer_shell_v1_interface_ptr(), 1)}
 		}
 		else {}
 	}

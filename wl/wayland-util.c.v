@@ -44,6 +44,24 @@ fn C.wl_array_release(array &C.wl_array)
 fn C.wl_array_add(array &C.wl_array, size usize) voidptr
 fn C.wl_array_copy(array &C.wl_array, source &C.wl_array) int
 
+pub type C.wl_fixed_t = i32
+
+pub fn wl_fixed_to_double(f C.wl_fixed_t) f64 {
+	return f64(f) / 256.0
+}
+
+pub fn wl_fixed_from_double(d f64) C.wl_fixed_t {
+	return i32(d * 256.0)
+}
+
+pub fn wl_fixed_to_int(f C.wl_fixed_t) int {
+	return f / 256
+}
+
+pub fn wl_fixed_from_int(i int) C.wl_fixed_t {
+	return i32(i * 256)
+}
+
 type Wl_log_func_t = fn (fmt &char, args ...voidptr)
 
 pub enum Wl_interator_result {
