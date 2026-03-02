@@ -2,29 +2,32 @@ module main
 
 import protocols.color_management_v1 as cm
 
-fn handle_cm_image_description_info_done(mut state State, proxy voidptr) {
-    state.n_cm_done++
+fn handle_cm_image_description_info_done(data voidptr, obj voidptr) {
+	mut state := unsafe { &State(data) }
+	state.n_cm_done++
 }
 
-fn handle_cm_image_description_info_tf_named(mut state State, info &cm.WpImageDescriptionInfoV1, tf u32) {
+fn handle_cm_image_description_info_tf_named(data voidptr, obj voidptr, tf u32) {
+	mut state := unsafe { &State(data) }
 	state.is_hdr = tf & u32(cm.WpColorManagerV1_TransferFunction.st2084_pq) != 0
 }
 
-const cm_image_description_info_listener = C.wp_image_description_info_v1_listener{
-	done:             handle_cm_image_description_info_done
-	icc_file:         fn (_ voidptr, _ voidptr, _ int, _ u32) {}
-	primaries:        fn (_ voidptr, _ voidptr, _ int, _ int, _ int, _ int, _ int, _ int, _ int, _ int) {}
-	primaries_named:  fn (_ voidptr, _ voidptr, _ u32) {}
-	tf_power:         fn (_ voidptr, _ voidptr, _ u32) {}
-	tf_named:         handle_cm_image_description_info_tf_named
-	luminances:       fn (_ voidptr, _ voidptr, _ u32, _ u32, _ u32) {}
-	target_primaries: fn (_ voidptr, _ voidptr, _ int, _ int, _ int, _ int, _ int, _ int, _ int, _ int) {}
-	target_luminance: fn (_ voidptr, _ voidptr, _ u32, _ u32) {}
-	target_max_cll:   fn (_ voidptr, _ voidptr, _ u32) {}
-	target_max_fall:  fn (_ voidptr, _ voidptr, _ u32) {}
-}
+const cm_image_description_info_listener = cm.wpimagedescriptioninfov1_listener(
+	handle_cm_image_description_info_done, // done
+	none, // icc_file
+	none, // primaries
+	none, // primaries_named
+	none, // tf_power
+	handle_cm_image_description_info_tf_named, // tf_named
+	none, // luminances
+	none, // target_primaries
+	none, // target_luminance
+	none, // target_max_cll
+	none // target_max_fall
+)
 
-fn handle_cm_image_description_ready(mut state State, description_proxy voidptr, identity u32) {
+fn handle_cm_image_description_ready(data voidptr, description_proxy voidptr, identity u32) {
+	mut state := unsafe { &State(data) }
 	mut desc := &cm.WpImageDescriptionV1{
 		proxy: description_proxy
 	}
@@ -32,22 +35,23 @@ fn handle_cm_image_description_ready(mut state State, description_proxy voidptr,
 	info.add_listener(&cm_image_description_info_listener, state)
 }
 
-fn handle_cm_image_description_failed(mut state State, description &cm.WpImageDescriptionV1, cause u32, msg &char) {
+fn handle_cm_image_description_failed(data voidptr, description &cm.WpImageDescriptionV1, cause u32, msg &char) {
 	msg_str := unsafe { msg.vstring() }
 	eprintln('Image description failed: ${msg_str} (cause: ${cause})')
 }
 
-const cm_image_description_listener = C.wp_image_description_v1_listener{
-	failed: handle_cm_image_description_failed
-	ready:  handle_cm_image_description_ready
-	ready2: fn (_ voidptr, _ voidptr, _ u32, _ u32) {}
-}
+const cm_image_description_listener = cm.wpimagedescriptionv1_listener(
+	handle_cm_image_description_failed, // failed
+	handle_cm_image_description_ready, // ready
+	none // ready2
+)
 
-fn handle_cm_output_image_description_changed(mut state State, mut cm_output cm.WpColorManagementOutputV1) {
+fn handle_cm_output_image_description_changed(data voidptr, mut cm_output cm.WpColorManagementOutputV1) {
+	mut state := unsafe { &State(data) }
 	mut description := cm_output.get_image_description()
 	description.add_listener(&cm_image_description_listener, state)
 }
 
-const cm_output_listener = C.wp_color_management_output_v1_listener{
-	image_description_changed: handle_cm_output_image_description_changed
-}
+const cm_output_listener = cm.wpcolormanagementoutputv1_listener(
+	handle_cm_output_image_description_changed // image_description_changed
+)

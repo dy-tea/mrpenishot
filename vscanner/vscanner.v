@@ -139,11 +139,23 @@ Try: vscanner --help
 		println('Generating V code for protocol: ${protocol.name}')
 	}
 	v_code := generate_v_code(protocol)
+	c_header := generate_c_header(protocol)
+	c_code := generate_c_code(protocol)
 	module_name := protocol.name.replace('-', '_')
 	output_file := os.join_path(output_dir, '${module_name}.v')
+	header_file := os.join_path(output_dir, '${module_name}-client-protocol.h')
+	code_file := os.join_path(output_dir, '${module_name}-protocol.c')
 
 	os.write_file(output_file, v_code) or {
 		eprintln('Error writing file: ${err}')
+		exit(1)
+	}
+	os.write_file(header_file, c_header) or {
+		eprintln('Error writing header: ${err}')
+		exit(1)
+	}
+	os.write_file(code_file, c_code) or {
+		eprintln('Error writing code: ${err}')
 		exit(1)
 	}
 
@@ -345,28 +357,54 @@ fn generate_v_code(protocol Protocol) string {
 		out.writeln('/*\n${protocol.copyright}\n*/\n')
 	}
 
+	out.writeln('@[has_globals]\n')
+
 	module_name := protocol.name.replace('-', '_')
 	out.writeln('module ${module_name}\n')
 	out.writeln('import wl\n')
 
-	if protocol.name == 'wayland' {
-		out.writeln2('#pkgconfig wayland-client', '#include <wayland-client-protocol.h>\n')
-	} else {
-		out.writeln('import protocols.wayland\n
+	// wayland ffi
+	out.writeln('// Core libwayland FFI functions
 #pkgconfig wayland-client
-#include <wayland-client.h>
-#include "${module_name}-client-protocol.h"
+')
+
+	if protocol.name != 'wayland' {
+		out.writeln('#include "${module_name}-client-protocol.h"
 #flag -I @VMODROOT/protocols/${module_name}
-#flag @VMODROOT/protocols/${module_name}/${module_name}-protocol.c\n
-const _remove_module_import_warning = wayland.wl_display_interface_name')
+#flag @VMODROOT/protocols/${module_name}/${module_name}-protocol.c\n')
+	} else {
+		out.writeln('#include <wayland-client.h>\n')
 	}
+
+	out.writeln('// Core Wayland protocol functions
+fn C.wl_proxy_add_listener(proxy voidptr, implementation voidptr, data voidptr) int
+fn C.wl_proxy_marshal_flags(proxy voidptr, opcode u32, interface voidptr, flags u32, ...) voidptr
+fn C.wl_proxy_get_user_data(proxy voidptr) voidptr
+fn C.wl_proxy_set_user_data(proxy voidptr, data voidptr)
+fn C.wl_proxy_get_version(proxy voidptr) u32
+fn C.wl_proxy_destroy(proxy voidptr)
+fn C.wl_display_roundtrip(display voidptr) int
+fn C.wl_display_dispatch(display voidptr) int
+fn C.wl_display_flush(display voidptr) int
+fn C.wl_display_connect(name &char) voidptr
+fn C.wl_display_disconnect(display voidptr)
+')
+
+	out.writeln('\n__global (\n')
+	for iface in protocol.interfaces {
+		interface_var_name := '${iface.name}_interface'
+		out.writeln('    ${interface_var_name} voidptr\n')
+	}
+	out.writeln(')\n\n')
 	for iface in protocol.interfaces {
 		interface_var_name := '${iface.name}_interface'
 		out.writeln('@[inline]
 pub fn ${interface_var_name}_ptr() voidptr {
-\treturn unsafe { voidptr(&C.${interface_var_name}) }
+    return unsafe { voidptr(&C.${interface_var_name}) }
 }\n')
 	}
+
+	// Generate interface name constants
 	for iface in protocol.interfaces {
 		interface_var_name := '${iface.name}_interface'
 		out.writeln('pub const ${interface_var_name}_name = \'${iface.name}\'')
@@ -385,40 +423,40 @@ fn generate_interface_constant(iface Interface) string {
 
 	interface_var_name := '${iface.name}_interface'
 	out.writeln('pub const ${interface_var_name} = wl.Interface{
-\tname: \'${iface.name}\'
-\tversion: ${iface.version}
-\tmethod_count: ${iface.requests.len}')
+    name: \'${iface.name}\'
+    version: ${iface.version}
+    method_count: ${iface.requests.len}')
 
 	if iface.requests.len > 0 {
-		out.writeln('\tmethods: [')
+		out.writeln('    methods: [')
 		for request in iface.requests {
 			signature := get_signature(request.args)
-			out.writeln('\t\twl.Message{
-\t\t\tname: \'${request.name}\'
-\t\t\tsignature: \'${signature}\'
-\t\t\ttypes: ${generate_types_array(request.args)}
-\t\t}')
+			out.writeln('        wl.Message{
+            name: \'${request.name}\'
+            signature: \'${signature}\'
+            types: ${generate_types_array(request.args)}
+        }')
 		}
-		out.writeln('\t]')
+		out.writeln('    ]')
 	} else {
-		out.writeln('\tmethods: []')
+		out.writeln('    methods: []')
 	}
 
-	out.writeln('\tevent_count: ${iface.events.len}')
+	out.writeln('    event_count: ${iface.events.len}')
 
 	if iface.events.len > 0 {
-		out.writeln('\tevents: [')
+		out.writeln('    events: [')
 		for event in iface.events {
 			signature := get_signature(event.args)
-			out.writeln('\t\twl.Message{
-\t\t\tname: \'${event.name}\'
-\t\t\tsignature: \'${signature}\'
-\t\t\ttypes: ${generate_types_array(event.args)}
-\t\t}')
+			out.writeln('        wl.Message{
+            name: \'${event.name}\'
+            signature: \'${signature}\'
+            types: ${generate_types_array(event.args)}
+        }')
 		}
-		out.writeln('\t]')
+		out.writeln('    ]')
 	} else {
-		out.writeln('\tevents: []')
+		out.writeln('    events: []')
 	}
 
 	out.writeln('}')
@@ -464,17 +502,17 @@ fn generate_enum(iface Interface, enum_def Enum) string {
 
 	out.writeln('pub enum ${enum_name} {')
 	if enum_def.entries.len == 0 {
-		out.writeln('\t_placeholder = 0')
+		out.writeln('    _placeholder = 0')
 	} else {
 		for entry in enum_def.entries {
 			entry_name := sanitize_enum_entry_name(entry.name)
 			if entry.summary != '' {
 				lines := entry.summary.trim_space().split('\n')
 				for line in lines {
-					out.writeln('\t// ${line.trim_space()}')
+					out.writeln('    // ${line.trim_space()}')
 				}
 			}
-			out.writeln('\t${entry_name} = ${entry.value}')
+			out.writeln('    ${entry_name} = ${entry.value}')
 		}
 	}
 	out.writeln('}')
@@ -517,6 +555,11 @@ fn get_signature(args []Arg) string {
 	for arg in args {
 		prefix := if arg.nullable { '?' } else { '' }
 
+		if arg.typ == 'new_id' && arg.interface_name == '' {
+			sig += 'su'
+			continue
+		}
+
 		sig += prefix + match arg.typ {
 			'int' { 'i' }
 			'uint' { 'u' }
@@ -542,47 +585,75 @@ fn generate_struct(iface Interface) string {
 	}
 	out.writeln('pub struct ${struct_name} {
 pub mut:
-\tproxy voidptr
+    proxy voidptr
 }')
 
 	return out.str()
 }
 
 fn generate_listener(iface Interface) string {
-	_ := snake_to_pascal(iface.name) // unused
-	listener_name := 'C.${iface.name}_listener'
+	struct_name := snake_to_pascal(iface.name)
+	listener_type_name := '${struct_name}_Listener'
 
 	mut out := Builder{}
-	out.writeln('pub struct ${listener_name} {')
 
+	// Generate listener as array of function pointers
+	out.writeln('// Listener for ${iface.name}
+// Create with listener callbacks for each event
+pub struct ${listener_type_name} {
+pub mut:
+    callbacks []voidptr
+}
+
+// Helper to create a listener with callbacks')
+	out.write_string('pub fn ${listener_type_name.to_lower()}(')
+	mut param_list := []string{}
+	mut callback_sigs := []string{}
 	for event in iface.events {
 		method_name := event.name.replace('-', '_')
-
-		mut params := ['voidptr']
-		params << 'voidptr'
-
+		mut params := ['data voidptr', 'obj voidptr']
 		for arg in event.args {
-			param_type := arg_type_to_c(arg)
-			params << param_type
+			param_name := arg.name.replace('-', '_')
+			param_type := arg_type_to_v(arg)
+			params << '${param_name} ${param_type}'
 		}
-
-		if event.description != '' {
-			out.writeln('\t// ${event.description}')
-		}
-		out.writeln('\t${method_name} fn (${params.join(', ')})')
+		params_str := params.join(', ')
+		param_list << '${method_name} ?fn (${params_str}'
+		callback_sigs << params_str
 	}
+	out.writeln(param_list.join('), ') + ')) ${listener_type_name} {
+    mut callbacks := []voidptr{cap: ${iface.events.len}}
+')
+	for i, event in iface.events {
+		method_name := event.name.replace('-', '_')
+		callback_sig := callback_sigs[i]
+		out.writeln('    ${method_name}_fn := ${method_name} or { fn (${callback_sig}) {} }
+    callbacks << unsafe { voidptr(${method_name}_fn) }')
+	}
+	out.writeln('
+    return ${listener_type_name}{
+        callbacks: callbacks
+    }
+}
 
-	out.writeln('}')
+// Internal listener implementation
+struct ${listener_type_name}_Impl {
+mut:
+    listener ${listener_type_name}
+}')
 
 	return out.str()
 }
 
 fn generate_add_listener(iface Interface) string {
 	struct_name := snake_to_pascal(iface.name)
-	listener_name := 'C.${iface.name}_listener'
+	listener_type_name := '${struct_name}_Listener'
 
-	return 'pub fn (mut self ${struct_name}) add_listener(listener &${listener_name}, data voidptr) int {
-\treturn C.wl_proxy_add_listener(unsafe { &C.wl_proxy(self.proxy) }, unsafe { voidptr(listener) }, data)
+	return 'pub fn (mut self ${struct_name}) add_listener(listener &${listener_type_name}, data voidptr) int {
+    mut impl := &${listener_type_name}_Impl{
+        listener: *listener
+    }
+    return C.wl_proxy_add_listener(self.proxy, impl.listener.callbacks.data, data)
 }'
 }
 
@@ -599,17 +670,31 @@ fn generate_request_constants(iface Interface) string {
 
 fn generate_helper_methods(iface Interface) string {
 	struct_name := snake_to_pascal(iface.name)
-	return 'pub fn (mut self ${struct_name}) set_user_data(data voidptr) {
-\tC.wl_proxy_set_user_data(unsafe { &C.wl_proxy(self.proxy) }, data)
+
+	// Check if interface already has a destroy request
+	has_destroy := iface.requests.any(it.name == 'destroy')
+
+	mut code := 'pub fn (mut self ${struct_name}) set_user_data(data voidptr) {
+    C.wl_proxy_set_user_data(self.proxy, data)
 }
 
 pub fn (self ${struct_name}) get_user_data() voidptr {
-\treturn C.wl_proxy_get_user_data(unsafe { &C.wl_proxy(self.proxy) })
+    return C.wl_proxy_get_user_data(self.proxy)
 }
 
 pub fn (self ${struct_name}) get_version() u32 {
-\treturn C.wl_proxy_get_version(unsafe { &C.wl_proxy(self.proxy) })
+    return C.wl_proxy_get_version(self.proxy)
 }'
+
+	if !has_destroy {
+		code += '
+
+pub fn (mut self ${struct_name}) destroy() {
+    C.wl_proxy_destroy(self.proxy)
+}'
+	}
+
+	return code
 }
 
 fn arg_type_to_c(arg Arg) string {
@@ -638,22 +723,22 @@ fn arg_type_to_v(arg Arg) string {
 			'int'
 		}
 		'string' {
-			'string'
+			'&char'
 		}
 		'object' {
 			'voidptr'
 		}
 		'new_id' {
 			if arg.interface_name.starts_with('wl_') {
-				'&wl.${snake_to_pascal(arg.interface_name)}'
+				'voidptr'
 			} else if arg.interface_name != '' {
-				'&${snake_to_pascal(arg.interface_name)}'
+				'voidptr'
 			} else {
 				'voidptr'
 			}
 		}
 		'array' {
-			'&u32'
+			'voidptr'
 		}
 		'fd' {
 			'int'
@@ -696,9 +781,9 @@ fn generate_request_method(iface Interface, request Message, opcode int) string 
 			param_type := arg_type_to_v(arg)
 			params << '${param_name} ${param_type}'
 
+			// for varargs, we need explicit casts
 			call_args << match arg.typ {
-				'object' { param_name }
-				'string' { 'voidptr(${param_name}.str)' }
+				'string' { 'unsafe { voidptr(${param_name}) }' }
 				else { param_name }
 			}
 		}
@@ -707,7 +792,7 @@ fn generate_request_method(iface Interface, request Message, opcode int) string 
 	// Signature and Return Type
 	new_id_arg_name := if new_id_arg.interface_name != '' {
 		if new_id_arg.interface_name.starts_with('wl_') && !iface.name.starts_with('wl_') {
-			' &wayland.${snake_to_pascal(new_id_arg.interface_name)}'
+			' &protocols.wayland.${snake_to_pascal(new_id_arg.interface_name)}'
 		} else {
 			' &${snake_to_pascal(new_id_arg.interface_name)}'
 		}
@@ -722,30 +807,30 @@ fn generate_request_method(iface Interface, request Message, opcode int) string 
 
 	if has_new_id {
 		if new_id_arg.interface_name != '' {
-			out.write_string('\tproxy := C.wl_proxy_marshal_flags(unsafe { &C.wl_proxy(self.proxy) }, ${opcode}, ')
+			out.write_string('    proxy := C.wl_proxy_marshal_flags(self.proxy, ${opcode}, ')
 			if new_id_arg.interface_name.starts_with('wl_') && !iface.name.starts_with('wl_') {
-				out.write_string('wayland.${new_id_arg.interface_name}_interface_ptr(), ')
+				out.write_string('protocols.wayland.${new_id_arg.interface_name}_interface_ptr(), ')
 			} else {
 				out.write_string('${new_id_arg.interface_name}_interface_ptr(), ')
 			}
-			out.write_string('C.wl_proxy_get_version(unsafe { &C.wl_proxy(self.proxy) }), ')
+			out.write_string('self.get_version(), ')
 			out.write_string(if request.is_destructor { 'wl.wl_marshal_flag_destroy, ' } else { '0, ' })
 			out.write_string('unsafe { nil }')
 			out.write_string(if call_args.len > 0 { ', ${call_args.join(', ')}' } else { '' })
 			out.writeln(')')
 
-			out.writeln('\treturn &${new_id_arg_name.trim_space()[1..]}{
-\t\tproxy: proxy
-\t}')
+			out.writeln('    return &${new_id_arg_name.trim_space()[1..]}{
+        proxy: proxy
+    }')
 		} else {
-			out.write_string('\tproxy := C.wl_proxy_marshal_flags(unsafe { &C.wl_proxy(self.proxy) }, ${opcode}, unsafe { &C.wl_interface(iface) }, version, ')
+			out.write_string('    proxy := C.wl_proxy_marshal_flags(self.proxy, ${opcode}, iface, version, ')
 			out.write_string(if request.is_destructor { 'wl.wl_marshal_flag_destroy' } else { '0' })
 			out.write_string(if call_args.len > 0 { ', ${call_args.join(', ')}, unsafe { nil }' } else { ', unsafe { nil }' })
 			out.writeln(')')
-			out.writeln('\treturn proxy')
+			out.writeln('    return proxy')
 		}
 	} else {
-		out.write_string('\tC.wl_proxy_marshal_flags(unsafe { &C.wl_proxy(self.proxy) }, ${opcode}, unsafe { nil }, C.wl_proxy_get_version(unsafe { &C.wl_proxy(self.proxy) }), ')
+		out.write_string('    C.wl_proxy_marshal_flags(self.proxy, ${opcode}, unsafe { nil }, self.get_version(), ')
 		out.write_string(if request.is_destructor { 'wl.wl_marshal_flag_destroy' } else { '0' })
 		if call_args.len > 0 {
 			out.write_string(', ${call_args.join(', ')}')
@@ -766,4 +851,220 @@ fn snake_to_pascal(s string) string {
 		}
 	}
 	return result
+}
+
+fn generate_c_header(protocol Protocol) string {
+	mut out := strings.Builder{}
+	module_name := protocol.name.replace('-', '_')
+
+	out.writeln('/* Generated by vscanner */
+#ifndef ${module_name.to_upper()}_CLIENT_PROTOCOL_H
+#define ${module_name.to_upper()}_CLIENT_PROTOCOL_H
+
+#include <stdint.h>
+#include <stddef.h>
+#include "wayland-client.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* Wayland type declarations */
+extern const struct wl_interface wl_type_int;
+extern const struct wl_interface wl_type_uint;
+extern const struct wl_interface wl_type_fixed;
+extern const struct wl_interface wl_type_string;
+extern const struct wl_interface wl_type_object;
+extern const struct wl_interface wl_type_new_id;
+extern const struct wl_interface wl_type_array;
+extern const struct wl_interface wl_type_fd;
+')
+
+	for iface in protocol.interfaces {
+		out.writeln('extern const struct wl_interface ${iface.name}_interface;')
+	}
+
+	out.writeln('
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* ${module_name.to_upper()}_CLIENT_PROTOCOL_H */
+')
+
+	return out.str()
+}
+
+fn generate_c_code(protocol Protocol) string {
+	mut out := strings.Builder{}
+	module_name := protocol.name.replace('-', '_')
+
+	out.writeln('/* Generated by vscanner */
+#include "${module_name}-client-protocol.h"
+#include "../vscanner_wl_types.h"
+
+// Forward declarations for external interfaces
+')
+
+	// Collect all interface names defined in this protocol
+	mut defined_interfaces := map[string]bool{}
+	for iface in protocol.interfaces {
+		defined_interfaces[iface.name] = true
+	}
+
+	// Collect all referenced interface names
+	mut referenced_interfaces := map[string]bool{}
+	for iface in protocol.interfaces {
+		for request in iface.requests {
+			for arg in request.args {
+				if arg.typ == 'new_id' || arg.typ == 'object' {
+					if arg.interface_name != '' && !defined_interfaces[arg.interface_name] {
+						referenced_interfaces[arg.interface_name] = true
+					}
+				}
+			}
+		}
+		for event in iface.events {
+			for arg in event.args {
+				if arg.typ == 'new_id' || arg.typ == 'object' {
+					if arg.interface_name != '' && !defined_interfaces[arg.interface_name] {
+						referenced_interfaces[arg.interface_name] = true
+					}
+				}
+			}
+		}
+	}
+
+	// Output extern declarations for external interfaces
+	for iface_name in referenced_interfaces.keys() {
+		c_name := iface_name.replace('-', '_')
+		out.writeln('extern const struct wl_interface ${c_name}_interface;')
+	}
+	out.writeln('')
+
+	for iface in protocol.interfaces {
+		out.writeln(generate_c_interface(iface))
+	}
+
+	return out.str()
+}
+
+fn generate_c_interface(iface Interface) string {
+	mut out := strings.Builder{}
+
+	// Generate type arrays for requests
+	for i, request in iface.requests {
+		types := generate_c_types(request.args)
+		out.writeln('static const struct wl_interface *${iface.name}_request_${i}_types[] = {${types}};')
+	}
+	if iface.requests.len == 0 {
+		out.writeln('static const struct wl_interface *${iface.name}_request_0_types[] = {0};')
+	}
+	out.writeln('')
+
+	// Generate message arrays for requests
+	if iface.requests.len > 0 {
+		out.writeln('static const struct wl_message ${iface.name}_requests[${iface.requests.len}] = {')
+		for i, request in iface.requests {
+			signature := get_c_signature(request.args)
+			out.writeln('\t{ "${request.name}", "${signature}", ${iface.name}_request_${i}_types },')
+		}
+		out.writeln('};\n')
+	} else {
+		out.writeln('static const struct wl_message ${iface.name}_requests[1] = {
+\t{ "", "", ${iface.name}_request_0_types },
+};\n')
+	}
+
+	// Generate type arrays for events
+	for i, event in iface.events {
+		types := generate_c_types(event.args)
+		out.writeln('static const struct wl_interface *${iface.name}_event_${i}_types[] = {${types}};')
+	}
+	if iface.events.len == 0 {
+		out.writeln('static const struct wl_interface *${iface.name}_event_0_types[] = {0};')
+	}
+	out.writeln('')
+
+	// Generate message arrays for events
+	if iface.events.len > 0 {
+		out.writeln('static const struct wl_message ${iface.name}_events[${iface.events.len}] = {')
+		for i, event in iface.events {
+			signature := get_c_signature(event.args)
+			out.writeln('\t{ "${event.name}", "${signature}", ${iface.name}_event_${i}_types },')
+		}
+		out.writeln('};\n')
+	} else {
+		out.writeln('static const struct wl_message ${iface.name}_events[1] = {
+\t{ "", "", ${iface.name}_event_0_types },
+};\n')
+	}
+
+	// Generate interface structure
+	out.writeln('const struct wl_interface ${iface.name}_interface = {
+\t"${iface.name}", ${iface.version},
+\t${iface.requests.len}, ${iface.name}_requests,
+\t${iface.events.len}, ${iface.name}_events,
+};\n')
+
+	return out.str()
+}
+
+fn get_c_signature(args []Arg) string {
+	mut sig := ''
+	for arg in args {
+		prefix := if arg.nullable { '?' } else { '' }
+
+		if arg.typ == 'new_id' && arg.interface_name == '' {
+			sig += 'su'
+			continue
+		}
+
+		sig += prefix + match arg.typ {
+			'int' { 'i' }
+			'uint' { 'u' }
+			'fixed' { 'f' }
+			'string' { 's' }
+			'object' { 'o' }
+			'new_id' { 'n' }
+			'array' { 'a' }
+			'fd' { 'h' }
+			else { '' }
+		}
+	}
+	return sig
+}
+
+fn generate_c_types(args []Arg) string {
+	if args.len == 0 {
+		return '0'
+	}
+
+	mut types := []string{}
+	for arg in args {
+		// Handle new_id arguments - these are return types that create new objects
+		if arg.typ == 'new_id' {
+			if arg.interface_name != '' {
+				// Has a specific interface - reference it
+				types << '&${arg.interface_name.replace('-', '_')}_interface'
+			} else {
+				types << 'NULL'  // for the interface name string
+				types << 'NULL'  // for the version uint
+			}
+			continue
+		}
+		// Handle object arguments - may have an interface reference
+		if arg.typ == 'object' {
+			if arg.interface_name != '' {
+				types << '&${arg.interface_name.replace('-', '_')}_interface'
+			} else {
+				types << 'NULL'
+			}
+			continue
+		}
+		// For primitive types, use NULL
+		types << 'NULL'
+	}
+
+	return types.join(', ')
 }

@@ -1,5 +1,6 @@
 #!/usr/bin/env -S v
 
+import os
 import term
 
 fn sh(cmd string) string {
@@ -51,7 +52,6 @@ if arguments().contains('clean') {
 }
 
 program_installed('pkg-config')
-program_installed('wayland-scanner')
 
 pkg_installed('wayland-protocols', '1.41')
 pkg_installed('wayland-client', none)
@@ -79,18 +79,13 @@ protocols := [
 
 sh('mkdir -p ${protocols_dir}')
 
+if !os.exists('${protocols_dir}/vscanner_wl_types.h') {
+	sh('cp ./protocols/vscanner_wl_types.h ${protocols_dir}/')
+}
+
 for protocol in protocols {
 	name := base(protocol).replace('.xml', '').replace('-', '_')
 	sh('${vscanner_dir}/vscanner ${protocol} ${protocols_dir}/${name}')
-
-	// Generate C protocol files for non-core protocols
-	if !protocol.contains('wayland.xml') {
-		// Use module name (with underscores) for C files to match vscanner output
-		header_file := '${protocols_dir}/${name}/${name}-client-protocol.h'
-		code_file := '${protocols_dir}/${name}/${name}-protocol.c'
-		sh('wayland-scanner client-header ${protocol} ${header_file}')
-		sh('wayland-scanner private-code ${protocol} ${code_file}')
-	}
 }
 
 if arguments().contains('install') {

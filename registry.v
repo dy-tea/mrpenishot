@@ -10,7 +10,8 @@ import protocols.ext_foreign_toplevel_list_v1 as ft
 import protocols.viewporter as vp
 import protocols.wlr_layer_shell_unstable_v1 as ls
 
-fn registry_handle_global(mut state State, registry voidptr, name u32, iface &char, version u32) {
+fn registry_handle_global(data voidptr, obj voidptr, name u32, iface &char, version u32) {
+	mut state := unsafe { &State(data) }
 	interface_name := unsafe { iface.vstring() }
 
 	match interface_name {
@@ -70,7 +71,7 @@ fn registry_handle_global(mut state State, registry voidptr, name u32, iface &ch
 	}
 }
 
-const registry_listener = C.wl_registry_listener{
-	global:        registry_handle_global
-	global_remove: fn (_ voidptr, _ voidptr, _ u32) {}
-}
+const registry_listener = wlp.wlregistry_listener(
+	registry_handle_global, // global
+	none // global_remove
+)
