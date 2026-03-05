@@ -190,13 +190,13 @@ fn render(state &State, geometry &Geometry, scale f64, fully_opaque bool) !&C.pi
 
 	// make background transparent
 	transparent_color := C.pixman_color{
-    red: 0, green: 0, blue: 0, alpha: 0
+    	red: 0, green: 0, blue: 0, alpha: 0
 	}
 	rect := C.pixman_rectangle16{
-    x: 0
-    y: 0
-    width: u16(common_width)
-    height: u16(common_height)
+	    x: 0
+	    y: 0
+	    width: u16(common_width)
+	    height: u16(common_height)
 	}
 	C.pixman_image_fill_rectangles(px.Pixman_op_t.src, common_image, &transparent_color, 1, &rect)
 
@@ -204,27 +204,27 @@ fn render(state &State, geometry &Geometry, scale f64, fully_opaque bool) !&C.pi
 		buffer := capture.buffer or { continue }
 
 		mut pixman_fmt := get_pixman_format(buffer.shm_format) or {
-    	return error('unsupported format ${buffer.shm_format}')
+    		return error('unsupported format ${buffer.shm_format}')
 		}
 
 		was_opaque := pixman_fmt in [.x8r8g8b8, .x8b8g8r8, .x2r10g10b10, .x2b10g10r10]
 		if capture.toplevel != none && was_opaque {
-    	pixman_fmt = match pixman_fmt {
-	      .x8r8g8b8 { px.Pixman_format_code_t.a8r8g8b8 }
-	      .x8b8g8r8 { px.Pixman_format_code_t.a8b8g8r8 }
-	      else { pixman_fmt }
-      }
-    }
+	    	pixman_fmt = match pixman_fmt {
+		      .x8r8g8b8 { px.Pixman_format_code_t.a8r8g8b8 }
+		      .x8b8g8r8 { px.Pixman_format_code_t.a8b8g8r8 }
+		      else { pixman_fmt }
+			}
+      	}
 
-    unsafe {
-      mut p := &u32(buffer.data)
-      num_pixels := (buffer.stride / 4) * buffer.height
-      for i in 0 .. num_pixels {
-        if (p[i] & 0x00FFFFFF) == 0 {
-          p[i] = 0
-        }
-      }
-    }
+	    unsafe {
+	    	mut p := &u32(buffer.data)
+		    num_pixels := (buffer.stride / 4) * buffer.height
+		    for i in 0 .. num_pixels {
+	       		if (p[i] & 0x00FFFFFF) == 0 {
+	          		p[i] = 0
+		        }
+		    }
+	   	}
 
 		output_x := capture.logical_geometry.x - geometry.x
 		output_y := capture.logical_geometry.y - geometry.y
@@ -233,8 +233,7 @@ fn render(state &State, geometry &Geometry, scale f64, fully_opaque bool) !&C.pi
 
 		mut raw_output_width := buffer.width
 		mut raw_output_height := buffer.height
-		raw_output_width, raw_output_height = transform_output(capture.transform, raw_output_width,
-			raw_output_height)
+		raw_output_width, raw_output_height = transform_output(capture.transform, raw_output_width, raw_output_height)
 
 		output_flipped_x := get_output_flipped(capture.transform)
 		output_flipped_y := 1
@@ -283,29 +282,28 @@ fn render(state &State, geometry &Geometry, scale f64, fully_opaque bool) !&C.pi
 				px.Pixman_kernel_t.lanczos2, 2, 2)
 			C.pixman_image_set_filter(output_image, px.Pixman_filter_t.seperable_convolution,
 				conv, n_values)
-			unsafe { free(conv) }
+			unsafe {
+				free(conv)
+			}
 		}
 
 		mut overlapping := false
 		for other_capture in state.captures {
-			if capture != other_capture
-				&& intersect_box(&capture.logical_geometry, &other_capture.logical_geometry) {
+			if capture != other_capture && intersect_box(&capture.logical_geometry, &other_capture.logical_geometry) {
 				overlapping = true
 				break
 			}
 		}
 
 		op := if capture.toplevel == none && grid_aligned && !overlapping {
-    	px.Pixman_op_t.src
+	   		px.Pixman_op_t.src
 		} else {
-    	px.Pixman_op_t.over
+		   	px.Pixman_op_t.over
 		}
 
-		unsafe {
-			C.pixman_image_composite32(op, output_image, nil, common_image, i32(0), i32(0),
-				i32(0), i32(0), i32(composite_dest.x), i32(composite_dest.y), u32(composite_dest.width),
-				u32(composite_dest.height))
-		}
+		C.pixman_image_composite32(op, output_image, null, common_image, i32(0), i32(0),
+			i32(0), i32(0), i32(composite_dest.x), i32(composite_dest.y), u32(composite_dest.width),
+			u32(composite_dest.height))
 
 		C.pixman_image_unref(output_image)
 	}
