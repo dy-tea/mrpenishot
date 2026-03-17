@@ -197,10 +197,10 @@ fn main() {
 			mut cm_output := color_manager.get_output(output.wl_output.proxy)
 			cm_output.add_listener(&cm_output_listener, state)
 			mut description := cm_output.get_image_description()
-		    description.add_listener(&cm_image_description_listener, output.state)
-		    if C.wl_display_roundtrip(display_proxy) < 0 {
-			    panic('wl_display_roundtrip failed')
-		    }
+			description.add_listener(&cm_image_description_listener, output.state)
+			if C.wl_display_roundtrip(display_proxy) < 0 {
+				panic('wl_display_roundtrip failed')
+			}
 		}
 	}
 
@@ -228,7 +228,8 @@ fn main() {
 	} else {
 		// capture output
 		for output in state.outputs {
-			if !geometry_is_cmd && geometry != Geometry{} && !geometry.intersect(output.logical_geometry) {
+			if !geometry_is_cmd && geometry != Geometry{}
+				&& !geometry.intersect(output.logical_geometry) {
 				continue
 			}
 			if output.logical_scale > scale {
@@ -244,16 +245,16 @@ fn main() {
 	// dispatch initial captures to get buffer data for overlays
 	mut done := false
 	expected_cm := if state.wp_color_manager_v1 != none { state.outputs.len } else { 0 }
-	for !done && C.wl_display_dispatch(display_proxy) != -1{
+	for !done && C.wl_display_dispatch(display_proxy) != -1 {
 		done = state.n_done == state.captures.len && state.n_cm_done >= expected_cm
 	}
 
 	// run geometry command with freeze
 	if geometry_is_cmd {
-		mut geometry_cmd_overlays := []&Overlay{}
+		mut overlays := []&Overlay{}
 		for capture in state.captures {
 			overlay := Overlay.new(capture)
-			geometry_cmd_overlays << overlay
+			overlays << overlay
 		}
 
 		// run command in background thread
@@ -263,7 +264,7 @@ fn main() {
 			ch <- result.output
 		}(geometry_cmd, result_ch)
 
-		// process Wayland events while waiting for command
+		// process events while waiting for command
 		mut cmd_output := ''
 		for {
 			C.wl_display_dispatch(display_proxy)
@@ -275,35 +276,15 @@ fn main() {
 				}
 			}
 		}
-		for mut overlay in geometry_cmd_overlays {
+
+		for mut overlay in overlays {
 			overlay.destroy()
 		}
-		geometry = Geometry.new(cmd_output.trim('\n')) or { panic('invalid geometry from command') }
-		state.captures = []
-		state.n_done = 0
-		state.n_cm_done = 0
-		for output in state.outputs {
-			if geometry != Geometry{} && !geometry.intersect(output.logical_geometry) {
-				continue
-			}
-			if output.logical_scale > scale {
-				scale = output.logical_scale
-			}
-			state.capture_output(output, include_cursor)
-		}
-		if state.captures.len == 0 {
-			panic('no captures found after geometry command')
-		}
-		// re-dispatch for new captures
-		done = false
-		for !done && C.wl_display_dispatch(display_proxy) != -1{
-			done = state.n_done == state.captures.len && state.n_cm_done >= expected_cm
-		}
-	}
 
-	// freeze screen overlay
-	mut overlays := []&Overlay{}
-	if freeze_screen_cmd != '' {
+		// get geometry from command output
+		geometry = Geometry.new(cmd_output.trim('\n')) or { panic('invalid geometry from command') }
+	} else if freeze_screen_cmd != '' {
+		mut overlays := []&Overlay{}
 		for capture in state.captures {
 			overlay := Overlay.new(capture)
 			overlays << overlay
@@ -322,9 +303,6 @@ fn main() {
 			C.wl_display_flush(display_proxy)
 			select {
 				exit_code := <-ch {
-					for mut overlay in overlays {
-						overlay.destroy()
-					}
 					if exit_code != 0 {
 						eprintln('freeze command exited with code ${exit_code}')
 					}
@@ -332,7 +310,13 @@ fn main() {
 				}
 			}
 		}
+
+		for mut overlay in overlays {
+			overlay.destroy()
+		}
 	}
+
+	// get default geometry if none provided
 	if geometry == Geometry{0, 0, 0, 0} {
 		geometry = state.get_extents()
 	}
@@ -367,7 +351,9 @@ fn main() {
 		mut stdout := os.stdout()
 		stdout.write(encoded) or { panic('Failed to write to stdout') }
 	} else {
-		os.write_bytes(output_filename, encoded) or { panic('Failed to write to file ${output_filename}') }
+		os.write_bytes(output_filename, encoded) or {
+			panic('Failed to write to file ${output_filename}')
+		}
 	}
 
 	// destroy
