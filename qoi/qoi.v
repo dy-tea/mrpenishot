@@ -1,6 +1,6 @@
 module qoi
 
-import fmt {Category}
+import fmt { Category }
 import packer as pk
 
 // adapted from https://github.com/418Coffee/qoi-v
@@ -265,7 +265,8 @@ pub fn encode_qoi(image &C.pixman_image_t, fully_opaque bool, is_hdr bool) ![]u8
 				for y in 0 .. height {
 					unsafe {
 						row_ptr := &u32(&u8(pixels) + y * stride)
-						pk.pack_row32_10_hdr_to_32_8(&u32(row_ptr), width, row_buffer.data, fully_opaque, format)
+						pk.pack_row32_10_hdr_to_32_8(&u32(row_ptr), width, row_buffer.data,
+							fully_opaque, format)
 					}
 					buffer << row_buffer
 				}
@@ -273,7 +274,8 @@ pub fn encode_qoi(image &C.pixman_image_t, fully_opaque bool, is_hdr bool) ![]u8
 				for y in 0 .. height {
 					unsafe {
 						row_ptr := &u32(&u8(pixels) + y * stride)
-						pk.pack_row32_10_to_32_8(&u32(row_ptr), width, row_buffer.data, fully_opaque, format)
+						pk.pack_row32_10_to_32_8(&u32(row_ptr), width, row_buffer.data,
+							fully_opaque, format)
 					}
 					buffer << row_buffer
 				}
@@ -283,7 +285,8 @@ pub fn encode_qoi(image &C.pixman_image_t, fully_opaque bool, is_hdr bool) ![]u8
 			for y in 0 .. height {
 				unsafe {
 					row_ptr := &u32(&u8(pixels) + y * stride)
-					pk.pack_row32_8(&u32(row_ptr), width, row_buffer.data, fully_opaque, format)
+					pk.pack_row32_8(&u32(row_ptr), width, row_buffer.data, fully_opaque,
+						format)
 				}
 				buffer << row_buffer
 			}

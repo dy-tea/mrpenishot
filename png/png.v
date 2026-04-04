@@ -51,8 +51,8 @@ pub fn encode_png(image &C.pixman_image_t, fully_opaque bool, is_hdr bool) ![]u8
 	if category == ._10c_32b {
 		C.png_set_cICP(png_ptr, info, 9, 14, 0, 1)
 	}
-	C.png_set_IHDR(png_ptr, info, u32(width), u32(height), if category == ._10c_32b { 16 } else { 8 }, color_type, png_interlace_none,
-		png_compression_type_base, png_filter_type_base)
+	C.png_set_IHDR(png_ptr, info, u32(width), u32(height), if category == ._10c_32b { 16 } else { 8 },
+		color_type, png_interlace_none, png_compression_type_base, png_filter_type_base)
 	C.png_write_info(png_ptr, info)
 
 	row_buffer := []u8{len: int(width) * if fully_opaque { 3 } else { 4 } * bits / 8}
@@ -62,7 +62,8 @@ pub fn encode_png(image &C.pixman_image_t, fully_opaque bool, is_hdr bool) ![]u8
 				for y in 0 .. height {
 					unsafe {
 						row_ptr := &u32(&u8(pixels) + y * stride)
-						pk.pack_row32_10_hdr(&u32(row_ptr), width, row_buffer.data, fully_opaque, format)
+						pk.pack_row32_10_hdr(&u32(row_ptr), width, row_buffer.data, fully_opaque,
+							format)
 						C.png_write_row(png_ptr, row_buffer.data)
 					}
 				}
@@ -70,7 +71,8 @@ pub fn encode_png(image &C.pixman_image_t, fully_opaque bool, is_hdr bool) ![]u8
 				for y in 0 .. height {
 					unsafe {
 						row_ptr := &u32(&u8(pixels) + y * stride)
-						pk.pack_row32_10(&u32(row_ptr), width, row_buffer.data, fully_opaque, format)
+						pk.pack_row32_10(&u32(row_ptr), width, row_buffer.data, fully_opaque,
+							format)
 						C.png_write_row(png_ptr, row_buffer.data)
 					}
 				}
@@ -80,7 +82,8 @@ pub fn encode_png(image &C.pixman_image_t, fully_opaque bool, is_hdr bool) ![]u8
 			for y in 0 .. height {
 				unsafe {
 					row_ptr := &u32(&u8(pixels) + y * stride)
-					pk.pack_row32_8(&u32(row_ptr), width, row_buffer.data, fully_opaque, format)
+					pk.pack_row32_8(&u32(row_ptr), width, row_buffer.data, fully_opaque,
+						format)
 					C.png_write_row(png_ptr, row_buffer.data)
 				}
 			}

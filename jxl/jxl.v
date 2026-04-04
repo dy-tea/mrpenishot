@@ -65,7 +65,8 @@ pub fn encode_jxl(image &C.pixman_image_t, fully_opaque bool, is_hdr bool) ![]u8
 			for y in 0 .. height {
 				unsafe {
 					row_ptr := &u32(&u8(pixels) + y * stride)
-					pk.pack_row32_10(&u32(row_ptr), width, row_buffer.data, fully_opaque, format)
+					pk.pack_row32_10(&u32(row_ptr), width, row_buffer.data, fully_opaque,
+						format)
 				}
 				buffer << row_buffer
 			}
@@ -74,7 +75,8 @@ pub fn encode_jxl(image &C.pixman_image_t, fully_opaque bool, is_hdr bool) ![]u8
 			for y in 0 .. height {
 				unsafe {
 					row_ptr := &u32(&u8(pixels) + y * stride)
-					pk.pack_row32_8(&u32(row_ptr), width, row_buffer.data, fully_opaque, format)
+					pk.pack_row32_8(&u32(row_ptr), width, row_buffer.data, fully_opaque,
+						format)
 				}
 				buffer << row_buffer
 			}
@@ -92,9 +94,9 @@ pub fn encode_jxl(image &C.pixman_image_t, fully_opaque bool, is_hdr bool) ![]u8
 
 	pixel_format := C.JxlPixelFormat{
 		num_channels: u32(channels)
-		data_type: if is_hdr { .uint16 } else { .uint8 }
-		endianness: .big_endian
-		align: 0
+		data_type:    if is_hdr { .uint16 } else { .uint8 }
+		endianness:   .big_endian
+		align:        0
 	}
 
 	if C.JxlEncoderAddImageFrame(frame_settings, &pixel_format, buffer.data, usize(buffer.len)) != .success {
@@ -110,14 +112,18 @@ pub fn encode_jxl(image &C.pixman_image_t, fully_opaque bool, is_hdr bool) ![]u8
 	for {
 		status := C.JxlEncoderProcessOutput(enc, &next_out, &avail_out)
 		match status {
-			.success { break }
+			.success {
+				break
+			}
 			.need_more_output {
 				offset := output.len
 				unsafe { output.grow_len(65536) }
 				next_out = unsafe { &output[offset] }
 				avail_out = 65536
 			}
-			else { return error('encoding failed') }
+			else {
+				return error('encoding failed')
+			}
 		}
 	}
 

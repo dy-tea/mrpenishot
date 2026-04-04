@@ -4,32 +4,23 @@ import math
 import protocols.wayland as wlp
 import protocols.ext_image_copy_capture_v1 as cc
 
-fn frame_handle_transform(data voidptr, obj voidptr, transform u32) {
-	mut capture := unsafe { &Capture(data) }
+fn frame_handle_transform(mut capture Capture, obj voidptr, transform u32) {
 	capture.transform = unsafe { wlp.WlOutput_Transform(transform) }
 }
 
-fn frame_handle_ready(data voidptr, obj voidptr) {
-	mut capture := unsafe { &Capture(data) }
+fn frame_handle_ready(mut capture Capture, obj voidptr) {
 	capture.state.n_done++
 }
 
-fn frame_handle_failed(data voidptr, obj voidptr, reason u32) {
-	capture := unsafe { &Capture(data) }
+fn frame_handle_failed(mut capture Capture, obj voidptr, reason u32) {
 	name := if output := capture.output { output.name } else { 'unknown' }
 	panic('failed to copy output ${name}, reason: ${reason}')
 }
 
-const frame_listener = cc.extimagecopycaptureframev1_listener(
-	frame_handle_transform, // transform
-	none, // damage
-	none, // presentation_time
-	frame_handle_ready, // ready
-	frame_handle_failed // failed
-)
+const frame_listener = cc.extimagecopycaptureframev1_listener(frame_handle_transform,
+	none, none, frame_handle_ready, frame_handle_failed)
 
-fn session_handle_buffer_size(data voidptr, obj voidptr, width u32, height u32) {
-	mut capture := unsafe { &Capture(data) }
+fn session_handle_buffer_size(mut capture Capture, obj voidptr, width u32, height u32) {
 	capture.buffer_width = width
 	capture.buffer_height = height
 	if capture.output == none {
@@ -38,8 +29,7 @@ fn session_handle_buffer_size(data voidptr, obj voidptr, width u32, height u32) 
 	}
 }
 
-fn session_handle_shm_format(data voidptr, obj voidptr, format u32) {
-	mut capture := unsafe { &Capture(data) }
+fn session_handle_shm_format(mut capture Capture, obj voidptr, format u32) {
 	fmt := unsafe { wlp.WlShm_Format(format) }
 	is_toplevel := capture.toplevel != none
 	if current_fmt := capture.shm_format {
@@ -55,8 +45,7 @@ fn session_handle_shm_format(data voidptr, obj voidptr, format u32) {
 	capture.shm_format = fmt
 }
 
-fn session_handle_done(data voidptr, obj voidptr) {
-	mut capture := unsafe { &Capture(data) }
+fn session_handle_done(mut capture Capture, obj voidptr) {
 	if capture.ext_image_copy_capture_frame_v1 != none {
 		return
 	}
@@ -79,16 +68,11 @@ fn session_handle_done(data voidptr, obj voidptr) {
 	frame.capture()
 }
 
-const session_listener = cc.extimagecopycapturesessionv1_listener(
-	session_handle_buffer_size, // buffer_size
-	session_handle_shm_format, // shm_format
-	none, // dmabuf_device
-	none, // dmabuf_format
-	session_handle_done, // done
-	none // stopped
-)
+const session_listener = cc.extimagecopycapturesessionv1_listener(session_handle_buffer_size,
+	session_handle_shm_format, none, none, session_handle_done, none)
 
 fn is_alpha_format(format wlp.WlShm_Format) bool {
-	alpha_formats := [wlp.WlShm_Format.argb8888, .abgr8888, .bgra8888, .rgba8888, .argb2101010, .abgr2101010]
+	alpha_formats := [wlp.WlShm_Format.argb8888, .abgr8888, .bgra8888, .rgba8888, .argb2101010,
+		.abgr2101010]
 	return format in alpha_formats
 }

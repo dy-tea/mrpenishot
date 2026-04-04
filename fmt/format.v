@@ -20,7 +20,7 @@ pub fn Category.new(p px.Pixman_format_code_t) Category {
 			._8c_24b
 		}
 		else {
-			panic("Unsupported format: ${p}")
+			panic('Unsupported format: ${p}')
 		}
 	}
 }

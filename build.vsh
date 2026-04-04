@@ -26,13 +26,13 @@ fn pkg_installed(name string, version ?string) {
 		err('package `${name}` not found')
 	} else {
 		if ver := version {
-		  	exp := ver.split('.').map(|x| x.int())
+			exp := ver.split('.').map(|x| x.int())
 			if exp.len != ins.len {
-			  err('package version lengths `${ver}` and `${ins_str}` differ')
+				err('package version lengths `${ver}` and `${ins_str}` differ')
 			}
-		  	for i in 0..ins.len {
+			for i in 0 .. ins.len {
 				if ins[i] > exp[i] {
-				  	return
+					return
 				}
 			}
 			err('package `${name}` version must be >= ${ver}')
@@ -74,7 +74,7 @@ protocols := [
 	wl_proto_dir + '/staging/ext-image-copy-capture/ext-image-copy-capture-v1.xml',
 	wl_proto_dir + '/staging/ext-foreign-toplevel-list/ext-foreign-toplevel-list-v1.xml',
 	wl_proto_dir + '/unstable/xdg-output/xdg-output-unstable-v1.xml',
-	'protocols/wlr-layer-shell-unstable-v1.xml'
+	'protocols/wlr-layer-shell-unstable-v1.xml',
 ]
 
 sh('mkdir -p ${protocols_dir}')

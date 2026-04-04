@@ -71,7 +71,4 @@ fn registry_handle_global(data voidptr, obj voidptr, name u32, iface &char, vers
 	}
 }
 
-const registry_listener = wlp.wlregistry_listener(
-	registry_handle_global, // global
-	none // global_remove
-)
+const registry_listener = wlp.wlregistry_listener(registry_handle_global, none)

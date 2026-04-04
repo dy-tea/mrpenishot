@@ -26,8 +26,8 @@ mut:
 	wp_viewporter                                        ?&vp.WpViewporter
 	wlr_layer_shell_v1                                   ?&ls.ZwlrLayerShellV1
 
-	is_hdr             bool
-	n_cm_done          int
+	is_hdr    bool
+	n_cm_done int
 
 	outputs   []Output
 	toplevels []&Toplevel

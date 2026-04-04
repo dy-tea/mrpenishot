@@ -2,21 +2,14 @@ module main
 
 import protocols.ext_foreign_toplevel_list_v1 as ft
 
-fn foreign_toplevel_handle_identifier(data voidptr, obj voidptr, identifier &char) {
-	mut toplevel := unsafe { &Toplevel(data) }
+fn foreign_toplevel_handle_identifier(mut toplevel Toplevel, obj voidptr, identifier &char) {
 	toplevel.identifier = unsafe { identifier.vstring() }
 }
 
-const foreign_toplevel_listener = ft.extforeigntoplevelhandlev1_listener(
-	none, // closed
-	none, // done
-	none, // title
-	none, // app_id
-	foreign_toplevel_handle_identifier // identifier
-)
+const foreign_toplevel_listener = ft.extforeigntoplevelhandlev1_listener(none, none, none,
+	none, foreign_toplevel_handle_identifier)
 
-fn foreign_toplevel_list_handle_toplevel(data voidptr, obj voidptr, toplevel_handle voidptr) {
-	mut state := unsafe { &State(data) }
+fn foreign_toplevel_list_handle_toplevel(mut state State, obj voidptr, toplevel_handle voidptr) {
 	mut handle := &ft.ExtForeignToplevelHandleV1{
 		proxy: toplevel_handle
 	}
@@ -27,7 +20,5 @@ fn foreign_toplevel_list_handle_toplevel(data voidptr, obj voidptr, toplevel_han
 	state.toplevels << toplevel
 }
 
-const foreign_toplevel_list_listener = ft.extforeigntoplevellistv1_listener(
-	foreign_toplevel_list_handle_toplevel, // toplevel
-	none // finished
-)
+const foreign_toplevel_list_listener = ft.extforeigntoplevellistv1_listener(foreign_toplevel_list_handle_toplevel,
+	none)

@@ -7,8 +7,7 @@ import protocols.wlr_layer_shell_unstable_v1 as ls
 // needed for xdg_popup interface
 import protocols.xdg_shell as _
 
-fn layer_surface_v1_configure(data voidptr, obj voidptr, serial u32, width u32, height u32) {
-	mut overlay := unsafe { &Overlay(data) }
+fn layer_surface_v1_configure(mut overlay Overlay, obj voidptr, serial u32, width u32, height u32) {
 	if mut layer_surface := overlay.layer_surface_v1 {
 		layer_surface.ack_configure(serial)
 	}
@@ -21,22 +20,10 @@ fn layer_surface_v1_closed(data voidptr, obj voidptr) {
 	panic('Layer surface died unexpectedly')
 }
 
-const layer_surface_listener = ls.zwlrlayersurfacev1_listener(
-	layer_surface_v1_configure, // configure
-	layer_surface_v1_closed // closed
-)
+const layer_surface_listener = ls.zwlrlayersurfacev1_listener(layer_surface_v1_configure,
+	layer_surface_v1_closed)
 
-fn surface_enter(data voidptr, obj voidptr, output voidptr) {}
-fn surface_leave(data voidptr, obj voidptr, output voidptr) {}
-fn surface_preferred_buffer_scale(data voidptr, obj voidptr, factor int) {}
-fn surface_preferred_buffer_transform(data voidptr, obj voidptr, transform u32) {}
-
-const surface_listener = wlp.wlsurface_listener(
-	surface_enter, // enter
-	surface_leave, // leave
-	surface_preferred_buffer_scale, // preferred_buffer_scale
-	surface_preferred_buffer_transform // preferred_buffer_transform
-)
+const surface_listener = wlp.wlsurface_listener(none, none, none, none)
 
 fn Overlay.new(capture &Capture) &Overlay {
 	mut overlay := &Overlay{
@@ -68,7 +55,7 @@ fn Overlay.new(capture &Capture) &Overlay {
 		mut wlr_layer_shell := capture.state.wlr_layer_shell_v1 or { panic('No layer shell init') }
 
 		mut layer_surface := wlr_layer_shell.get_layer_surface(surface.proxy, output.wl_output.proxy,
-			u32(ls.ZwlrLayerShellV1_Layer.overlay), 'mrpenishot'.str)
+			u32(ls.ZwlrLayerShellV1_Layer.overlay), c'mrpenishot')
 		overlay.layer_surface_v1 = layer_surface
 		if layer_surface == unsafe { nil } {
 			panic('Failed to get layer surface')
@@ -85,7 +72,8 @@ fn Overlay.new(capture &Capture) &Overlay {
 		if buffer := capture.buffer {
 			mut shm := capture.state.shm or { panic('No shm init') }
 			stride := int(get_min_stride(buffer.shm_format, u32(buffer.width)))
-			mut overlay_buffer := Buffer.new(mut shm, buffer.shm_format, buffer.width, buffer.height, stride)
+			mut overlay_buffer := Buffer.new(mut shm, buffer.shm_format, buffer.width,
+				buffer.height, stride)
 			unsafe {
 				C.memcpy(overlay_buffer.data, buffer.data, buffer.size)
 			}
