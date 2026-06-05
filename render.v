@@ -182,8 +182,7 @@ fn render(state &State, geometry &Geometry, scale f64, fully_opaque bool) !&C.pi
 	}
 	common_width := int(geometry.width * scale)
 	common_height := int(geometry.height * scale)
-	common_image := C.pixman_image_create_bits(common_format, common_width, common_height,
-		null, 0)
+	common_image := C.pixman_image_create_bits(common_format, common_width, common_height, null, 0)
 	if common_image == null {
 		return error('failed to create image with size: ${common_width} x ${common_height}')
 	}
@@ -251,20 +250,24 @@ fn render(state &State, geometry &Geometry, scale f64, fully_opaque bool) !&C.pi
 
 		mut out2com := C.pixman_f_transform{}
 		C.pixman_f_transform_init_identity(&out2com)
-		C.pixman_f_transform_translate(&out2com, null, -f64(buffer.width) / 2, -f64(buffer.height) / 2)
+		C.pixman_f_transform_translate(&out2com, null, -f64(buffer.width) / 2,
+			-f64(buffer.height) / 2)
 		C.pixman_f_transform_scale(&out2com, null, f64(output_width) / raw_output_width,
 			f64(output_height) * output_flipped_y / raw_output_height)
-		C.pixman_f_transform_rotate(&out2com, null, math.round(math.cos(get_output_rotation(capture.transform))),
+		C.pixman_f_transform_rotate(&out2com, null,
+			math.round(math.cos(get_output_rotation(capture.transform))),
 			math.round(math.sin(get_output_rotation(capture.transform))))
 		C.pixman_f_transform_scale(&out2com, null, f64(output_flipped_x), 1)
-		C.pixman_f_transform_translate(&out2com, null, f64(output_width) / 2, f64(output_height) / 2)
+		C.pixman_f_transform_translate(&out2com, null, f64(output_width) / 2,
+			f64(output_height) / 2)
 		C.pixman_f_transform_translate(&out2com, null, f64(output_x), f64(output_y))
 		C.pixman_f_transform_scale(&out2com, null, scale, scale)
 
 		composite_dest, grid_aligned := compute_composite_region(&out2com, buffer.width,
 			buffer.height)
 
-		C.pixman_f_transform_translate(&out2com, null, f64(-composite_dest.x), f64(-composite_dest.y))
+		C.pixman_f_transform_translate(&out2com, null, f64(-composite_dest.x),
+			f64(-composite_dest.y))
 
 		mut com2out := C.pixman_f_transform{}
 		C.pixman_f_transform_invert(&com2out, &out2com)
@@ -276,16 +279,15 @@ fn render(state &State, geometry &Geometry, scale f64, fully_opaque bool) !&C.pi
 		y_scale := math.max(math.abs(out2com.m[1][0]), math.abs(out2com.m[1][1]))
 
 		if x_scale >= 0.75 && y_scale >= 0.75 {
-			C.pixman_image_set_filter(output_image, px.Pixman_filter_t.bilinear, null,
-				0)
+			C.pixman_image_set_filter(output_image, px.Pixman_filter_t.bilinear, null, 0)
 		} else {
 			mut n_values := 0
 			conv := C.pixman_filter_create_separable_convolution(&n_values, px.pixman_double_to_fixed(math.max(1.0,
 				1.0 / x_scale)), px.pixman_double_to_fixed(math.max(1.0, 1.0 / y_scale)),
-				px.Pixman_kernel_t.impulse, px.Pixman_kernel_t.impulse, px.Pixman_kernel_t.lanczos2,
-				px.Pixman_kernel_t.lanczos2, 2, 2)
-			C.pixman_image_set_filter(output_image, px.Pixman_filter_t.seperable_convolution,
-				conv, n_values)
+				px.Pixman_kernel_t.impulse, px.Pixman_kernel_t.impulse,
+				px.Pixman_kernel_t.lanczos2, px.Pixman_kernel_t.lanczos2, 2, 2)
+			C.pixman_image_set_filter(output_image, px.Pixman_filter_t.seperable_convolution, conv,
+				n_values)
 			unsafe {
 				free(conv)
 			}
@@ -306,8 +308,8 @@ fn render(state &State, geometry &Geometry, scale f64, fully_opaque bool) !&C.pi
 			px.Pixman_op_t.over
 		}
 
-		C.pixman_image_composite32(op, output_image, null, common_image, i32(0), i32(0),
-			i32(0), i32(0), i32(composite_dest.x), i32(composite_dest.y), u32(composite_dest.width),
+		C.pixman_image_composite32(op, output_image, null, common_image, i32(0), i32(0), i32(0),
+			i32(0), i32(composite_dest.x), i32(composite_dest.y), u32(composite_dest.width),
 			u32(composite_dest.height))
 
 		C.pixman_image_unref(output_image)
