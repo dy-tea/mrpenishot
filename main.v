@@ -5,12 +5,12 @@ import qoi
 import jxl
 import png
 import flag
+import v.vmod
 import protocols.wayland as wlp
 import protocols.ext_image_copy_capture_v1 as cc
 
 #pkgconfig wayland-client
 
-const mrpenishot_version = '1.3.1'
 const supported_formats = ['png', 'ppm', 'qoi', 'jxl']
 
 fn (mut state State) capture_output(output &Output, include_cursor bool) {
@@ -64,14 +64,16 @@ fn main() {
 	// parse args
 	mut fp := flag.new_flag_parser(os.args)
 	fp.application('mrpenishot')
-	fp.version(mrpenishot_version)
+	fp.version(vmod.decode(@VMOD_FILE)!.version)
 	fp.skip_executable()
 	mut image_format := fp.string('format', `f`, 'png', 'output image format ${supported_formats}')
 	include_cursor := fp.bool('cursor', `c`, false, 'include cursor in resulting image')
 	passed_geometry := fp.string('geometry', `g`, '', 'geometry in the format "400,500 200x300"')
 	output_name := fp.string('output', `o`, '', 'name of output to screenshot')
-	toplevel_identifier := fp.string('toplevel', `t`, '', 'use a toplevel as the screenshot source by its identifier')
-	freeze_screen_cmd := fp.string('freeze', `F`, '', 'freeze the screen until passed command finishes or until the -g command finishes')
+	toplevel_identifier := fp.string('toplevel', `t`, '',
+		'use a toplevel as the screenshot source by its identifier')
+	freeze_screen_cmd := fp.string('freeze', `F`, '',
+		'freeze the screen until passed command finishes or until the -g command finishes')
 	additional_args := fp.finalize() or {
 		eprintln(err)
 		println(fp.usage())
