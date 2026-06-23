@@ -2,7 +2,7 @@ module main
 
 import os
 import rand
-import protocols.wayland as wlp
+import dy_tea.wayland as wl
 
 #flag -I/usr/include
 #include <sys/mman.h>
@@ -50,16 +50,16 @@ fn create_shm_file(size u64) int {
 @[heap]
 struct Buffer {
 mut:
-	wl_buffer  &wlp.WlBuffer
+	wl_buffer  wl.WlBuffer
 	data       voidptr
 	width      i32
 	height     i32
 	stride     i32
 	size       usize
-	shm_format wlp.WlShm_Format
+	shm_format wl.WlShmFormat
 }
 
-fn Buffer.new(mut shm wlp.WlShm, format wlp.WlShm_Format, width i32, height i32, stride i32) &Buffer {
+fn Buffer.new(mut shm wl.WlShm, format wl.WlShmFormat, width i32, height i32, stride i32) &Buffer {
 	size := stride * height
 
 	fd := create_shm_file(u64(size))
@@ -67,16 +67,17 @@ fn Buffer.new(mut shm wlp.WlShm, format wlp.WlShm_Format, width i32, height i32,
 		panic('Failed to create buffer')
 	}
 
-	data := C.mmap(unsafe { nil }, size, C.PROT_READ | C.PROT_WRITE, C.MAP_SHARED, fd,
-		0)
+	data := C.mmap(unsafe { nil }, size, C.PROT_READ | C.PROT_WRITE, C.MAP_SHARED, fd, 0)
 	if data == C.MAP_FAILED {
 		os.fd_close(fd)
 		panic('Failed to map buffer')
 	}
 
-	mut pool := shm.create_pool(fd, size)
-	buffer := pool.create_buffer(0, width, height, stride, u32(format))
-	pool.destroy()
+	mut pool := shm.create_pool(fd, size) or { panic('failed to create shm pool: ${err}') }
+	buffer := pool.create_buffer(0, width, height, stride, u32(format)) or {
+		panic('failed to create buffer: ${err}')
+	}
+	pool.destroy() or {}
 
 	os.fd_close(fd)
 
@@ -93,6 +94,5 @@ fn Buffer.new(mut shm wlp.WlShm, format wlp.WlShm_Format, width i32, height i32,
 
 fn (mut b Buffer) destroy() {
 	C.munmap(b.data, b.size)
-	b.wl_buffer.destroy()
-	// free(b)
+	b.wl_buffer.destroy() or {}
 }

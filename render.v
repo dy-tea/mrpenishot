@@ -1,12 +1,11 @@
 module main
 
 import math
-import protocols.wayland as wlp
+import dy_tea.wayland as wl
 import pixman as px
 
-fn get_pixman_format(wl_fmt wlp.WlShm_Format) !px.Pixman_format_code_t {
+fn get_pixman_format(wl_fmt wl.WlShmFormat) !px.Pixman_format_code_t {
 	return match wl_fmt {
-		// 32-bit formats
 		.argb8888 {
 			px.Pixman_format_code_t.a8r8g8b8
 		}
@@ -31,7 +30,6 @@ fn get_pixman_format(wl_fmt wlp.WlShm_Format) !px.Pixman_format_code_t {
 		.rgbx8888 {
 			px.Pixman_format_code_t.r8g8b8x8
 		}
-		// 30-bit/32-bit HDR formats
 		.argb2101010 {
 			px.Pixman_format_code_t.a2r10g10b10
 		}
@@ -44,14 +42,12 @@ fn get_pixman_format(wl_fmt wlp.WlShm_Format) !px.Pixman_format_code_t {
 		.xbgr2101010 {
 			px.Pixman_format_code_t.x2b10g10r10
 		}
-		// 24-bit formats
 		.rgb888 {
 			px.Pixman_format_code_t.r8g8b8
 		}
 		.bgr888 {
 			px.Pixman_format_code_t.b8g8r8
 		}
-		// 16-bit formats
 		.rgb565 {
 			px.Pixman_format_code_t.r5g6b5
 		}
@@ -70,7 +66,6 @@ fn get_pixman_format(wl_fmt wlp.WlShm_Format) !px.Pixman_format_code_t {
 		.xrgb1555 {
 			px.Pixman_format_code_t.x1r5g5b5
 		}
-		// 8-bit formats
 		.rgb332 {
 			px.Pixman_format_code_t.r3g3b2
 		}
@@ -83,7 +78,7 @@ fn get_pixman_format(wl_fmt wlp.WlShm_Format) !px.Pixman_format_code_t {
 	}
 }
 
-fn get_min_stride(f wlp.WlShm_Format, width u32) u32 {
+fn get_min_stride(f wl.WlShmFormat, width u32) u32 {
 	format := get_pixman_format(f) or { px.Pixman_format_code_t.b8g8r8a8 }
 	bpp := px.pixman_format_bpp(int(format))
 	if bpp == 24 {
@@ -187,7 +182,6 @@ fn render(state &State, geometry &Geometry, scale f64, fully_opaque bool) !&C.pi
 		return error('failed to create image with size: ${common_width} x ${common_height}')
 	}
 
-	// make background transparent
 	transparent_color := C.pixman_color{
 		red:   0
 		green: 0
@@ -200,8 +194,7 @@ fn render(state &State, geometry &Geometry, scale f64, fully_opaque bool) !&C.pi
 		width:  u16(common_width)
 		height: u16(common_height)
 	}
-	C.pixman_image_fill_rectangles(px.Pixman_op_t.src, common_image, &transparent_color,
-		1, &rect)
+	C.pixman_image_fill_rectangles(px.Pixman_op_t.src, common_image, &transparent_color, 1, &rect)
 
 	for capture in state.captures {
 		buffer := capture.buffer or { continue }

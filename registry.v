@@ -1,74 +1,68 @@
 module main
 
 import math
-import protocols.wayland as wlp
-import protocols.color_management_v1 as cm
-import protocols.xdg_output_unstable_v1 as xo
-import protocols.ext_image_copy_capture_v1 as cc
-import protocols.ext_image_capture_source_v1 as cs
-import protocols.ext_foreign_toplevel_list_v1 as ft
-import protocols.viewporter as vp
-import protocols.wlr_layer_shell_unstable_v1 as ls
+import dy_tea.wayland as wl
 
-fn registry_handle_global(data voidptr, obj voidptr, name u32, iface &char, version u32) {
-	mut state := unsafe { &State(data) }
-	interface_name := unsafe { iface.vstring() }
-
-	match interface_name {
-		wlp.wl_shm_interface_name {
-			state.shm = &wlp.WlShm{state.registry.bind(name, wlp.wl_shm_interface_ptr(),
-				version)}
-		}
-		wlp.wl_compositor_interface_name {
-			state.compositor = &wlp.WlCompositor{state.registry.bind(name, wlp.wl_compositor_interface_ptr(),
-				6)}
-		}
-		wlp.wl_output_interface_name {
-			mut output := &Output{
-				state:     state
-				scale:     1
-				wl_output: &wlp.WlOutput{state.registry.bind(name, wlp.wl_output_interface_ptr(),
-					math.min(version, 4))}
+fn init_globals(mut state State) {
+	for g in state.display.get_globals() {
+		match g.interface {
+			'wl_shm' {
+				raw := state.display.bind_global(g.name, g.interface, g.version) or { continue }
+				state.shm = wl.new_wl_shm(raw)
 			}
-			output.wl_output.add_listener(&output_listener, output)
-			state.outputs << output
+			'wl_compositor' {
+				raw := state.display.bind_global(g.name, g.interface, 6) or { continue }
+				state.compositor = wl.new_wl_compositor(raw)
+			}
+			'wl_output' {
+				raw := state.display.bind_global(g.name, g.interface, math.min(g.version, 4)) or {
+					continue
+				}
+				mut output := &Output{
+					state:     &state
+					scale:     1
+					wl_output: wl.new_wl_output(raw)
+				}
+				state.outputs << output
+				state.outputs_by_id[output.wl_output.id] = output
+			}
+			'wp_color_manager_v1' {
+				raw := state.display.bind_global(g.name, g.interface, 1) or { continue }
+				state.wp_color_manager_v1 = wl.new_wp_color_manager_v1(raw)
+			}
+			'zxdg_output_manager_v1' {
+				bind_version := math.min(g.version, 2)
+				raw := state.display.bind_global(g.name, g.interface, bind_version) or { continue }
+				state.zxdg_output_manager_v1 = wl.new_zxdg_output_manager_v1(raw)
+			}
+			'ext_output_image_capture_source_manager_v1' {
+				raw := state.display.bind_global(g.name, g.interface, 1) or { continue }
+				state.ext_output_image_capture_source_manager_v1 =
+					wl.new_ext_output_image_capture_source_manager_v1(raw)
+			}
+			'ext_foreign_toplevel_image_capture_source_manager_v1' {
+				raw := state.display.bind_global(g.name, g.interface, 1) or { continue }
+				state.ext_foreign_toplevel_image_capture_source_manager_v1 =
+					wl.new_ext_foreign_toplevel_image_capture_source_manager_v1(raw)
+			}
+			'ext_foreign_toplevel_list_v1' {
+				raw := state.display.bind_global(g.name, g.interface, 1) or { continue }
+				state.ext_foreign_toplevel_list_v1 = wl.new_ext_foreign_toplevel_list_v1(raw)
+			}
+			'ext_image_copy_capture_manager_v1' {
+				raw := state.display.bind_global(g.name, g.interface, 1) or { continue }
+				state.ext_image_copy_capture_manager_v1 =
+					wl.new_ext_image_copy_capture_manager_v1(raw)
+			}
+			'wp_viewporter' {
+				raw := state.display.bind_global(g.name, g.interface, 1) or { continue }
+				state.wp_viewporter = wl.new_wp_viewporter(raw)
+			}
+			'zwlr_layer_shell_v1' {
+				raw := state.display.bind_global(g.name, g.interface, 1) or { continue }
+				state.wlr_layer_shell_v1 = wl.new_zwlr_layer_shell_v1(raw)
+			}
+			else {}
 		}
-		cm.wp_color_manager_v1_interface_name {
-			state.wp_color_manager_v1 = &cm.WpColorManagerV1{state.registry.bind(name,
-				cm.wp_color_manager_v1_interface_ptr(), 1)}
-		}
-		xo.zxdg_output_manager_v1_interface_name {
-			bind_version := math.min(version, 2)
-			state.zxdg_output_manager_v1 = &xo.ZxdgOutputManagerV1{state.registry.bind(name,
-				xo.zxdg_output_manager_v1_interface_ptr(), bind_version)}
-		}
-		cs.ext_output_image_capture_source_manager_v1_interface_name {
-			state.ext_output_image_capture_source_manager_v1 = &cs.ExtOutputImageCaptureSourceManagerV1{state.registry.bind(name,
-				cs.ext_output_image_capture_source_manager_v1_interface_ptr(), 1)}
-		}
-		cs.ext_foreign_toplevel_image_capture_source_manager_v1_interface_name {
-			state.ext_foreign_toplevel_image_capture_source_manager_v1 = &cs.ExtForeignToplevelImageCaptureSourceManagerV1{state.registry.bind(name,
-				cs.ext_foreign_toplevel_image_capture_source_manager_v1_interface_ptr(),
-				1)}
-		}
-		ft.ext_foreign_toplevel_list_v1_interface_name {
-			state.ext_foreign_toplevel_list_v1 = &ft.ExtForeignToplevelListV1{state.registry.bind(name,
-				ft.ext_foreign_toplevel_list_v1_interface_ptr(), 1)}
-		}
-		cc.ext_image_copy_capture_manager_v1_interface_name {
-			state.ext_image_copy_capture_manager_v1 = &cc.ExtImageCopyCaptureManagerV1{state.registry.bind(name,
-				cc.ext_image_copy_capture_manager_v1_interface_ptr(), 1)}
-		}
-		vp.wp_viewporter_interface_name {
-			state.wp_viewporter = &vp.WpViewporter{state.registry.bind(name, vp.wp_viewporter_interface_ptr(),
-				1)}
-		}
-		ls.zwlr_layer_shell_v1_interface_name {
-			state.wlr_layer_shell_v1 = &ls.ZwlrLayerShellV1{state.registry.bind(name,
-				ls.zwlr_layer_shell_v1_interface_ptr(), 1)}
-		}
-		else {}
 	}
 }
-
-const registry_listener = wlp.wlregistry_listener(registry_handle_global, none)

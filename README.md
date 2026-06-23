@@ -15,6 +15,7 @@ _Wayland screenshot application written in the V programming language_
 
 ### Building
 ```sh
+v install        # install dependencies
 v run build.vsh  # generate protocols
 v .              # build
 ```

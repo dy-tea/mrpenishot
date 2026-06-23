@@ -24,8 +24,7 @@ fn encode_ppm(image &C.pixman_image_t, is_hdr bool) []u8 {
 				for y in 0 .. height {
 					unsafe {
 						row_ptr := &u32(&u8(pixels) + y * stride)
-						pk.pack_row32_10_hdr_to_32_8(row_ptr, width, row_buffer.data,
-							true, format)
+						pk.pack_row32_10_hdr_to_32_8(row_ptr, width, row_buffer.data, true, format)
 					}
 					buffer << row_buffer
 				}
@@ -33,8 +32,7 @@ fn encode_ppm(image &C.pixman_image_t, is_hdr bool) []u8 {
 				for y in 0 .. height {
 					unsafe {
 						row_ptr := &u32(&u8(pixels) + y * stride)
-						pk.pack_row32_10_to_32_8(row_ptr, width, row_buffer.data, true,
-							format)
+						pk.pack_row32_10_to_32_8(row_ptr, width, row_buffer.data, true, format)
 					}
 					buffer << row_buffer
 				}

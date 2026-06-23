@@ -1,24 +1,23 @@
 module main
 
-import protocols.ext_foreign_toplevel_list_v1 as ft
+import dy_tea.wayland as wl
 
-fn foreign_toplevel_handle_identifier(mut toplevel Toplevel, obj voidptr, identifier &char) {
-	toplevel.identifier = unsafe { identifier.vstring() }
+fn make_toplevel_handle_events() wl.ExtForeignToplevelHandleV1Events[&Toplevel] {
+	return wl.ExtForeignToplevelHandleV1Events[&Toplevel]{
+		identifier: fn (mut t Toplevel, identifier string) {
+			t.identifier = identifier
+		}
+	}
 }
 
-const foreign_toplevel_listener = ft.extforeigntoplevelhandlev1_listener(none, none, none,
-	none, foreign_toplevel_handle_identifier)
-
-fn foreign_toplevel_list_handle_toplevel(mut state State, obj voidptr, toplevel_handle voidptr) {
-	mut handle := &ft.ExtForeignToplevelHandleV1{
-		proxy: toplevel_handle
+fn make_toplevel_list_events() wl.ExtForeignToplevelListV1Events[&State] {
+	return wl.ExtForeignToplevelListV1Events[&State]{
+		toplevel: fn (mut s State, handle wl.ExtForeignToplevelHandleV1) {
+			toplevel := &Toplevel{
+				handle: handle
+			}
+			s.toplevels << toplevel
+			s.toplevels_by_id[handle.id] = toplevel
+		}
 	}
-	toplevel := &Toplevel{
-		handle: handle
-	}
-	handle.add_listener(&foreign_toplevel_listener, toplevel)
-	state.toplevels << toplevel
 }
-
-const foreign_toplevel_list_listener = ft.extforeigntoplevellistv1_listener(foreign_toplevel_list_handle_toplevel,
-	none)

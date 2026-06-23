@@ -1,38 +1,44 @@
 module main
 
-import protocols.color_management_v1 as cm
+import dy_tea.wayland as wl
 
-fn handle_cm_image_description_info_done(mut state State, obj voidptr) {
-	state.n_cm_done++
-}
-
-fn handle_cm_image_description_info_tf_named(mut state State, obj voidptr, tf u32) {
-	state.is_hdr = tf & u32(cm.WpColorManagerV1_TransferFunction.st2084_pq) != 0
-}
-
-const cm_image_description_info_listener = cm.wpimagedescriptioninfov1_listener(handle_cm_image_description_info_done,
-	none, none, none, none, handle_cm_image_description_info_tf_named, none, none, none,
-	none, none)
-
-fn handle_cm_image_description_ready(mut state State, description_proxy voidptr, identity u32) {
-	mut desc := &cm.WpImageDescriptionV1{
-		proxy: description_proxy
+fn make_cm_output_events() wl.WpColorManagementOutputV1Events[&Output] {
+	return wl.WpColorManagementOutputV1Events[&Output]{
+		image_description_changed: fn (o &Output) {
+			// Will handle in dispatch
+			_ := o
+		}
 	}
-	mut info := desc.get_information()
-	info.add_listener(&cm_image_description_info_listener, state)
 }
 
-fn handle_cm_image_description_failed(data voidptr, description &cm.WpImageDescriptionV1, cause u32, msg &char) {
-	msg_str := unsafe { msg.vstring() }
-	eprintln('Image description failed: ${msg_str} (cause: ${cause})')
+fn make_image_description_events() wl.WpImageDescriptionV1Events[&State] {
+	return wl.WpImageDescriptionV1Events[&State]{
+		failed: fn (s &State, cause u32, msg string) {
+			eprintln('Image description failed: ${msg} (cause: ${cause})')
+		}
+		ready:  fn (s &State, identity u32) {
+			// Get information from this description
+			// We handle this via dispatched messages
+			_ := identity
+		}
+		ready2: fn (s &State, identity_hi u32, identity_lo u32) {
+			_ := identity_hi
+			_ := identity_lo
+		}
+	}
 }
 
-const cm_image_description_listener = cm.wpimagedescriptionv1_listener(handle_cm_image_description_failed,
-	handle_cm_image_description_ready, none)
-
-fn handle_cm_output_image_description_changed(mut state State, mut cm_output cm.WpColorManagementOutputV1) {
-	mut description := cm_output.get_image_description()
-	description.add_listener(&cm_image_description_listener, state)
+fn make_image_desc_info_events() wl.WpImageDescriptionInfoV1Events[&State] {
+	return wl.WpImageDescriptionInfoV1Events[&State]{
+		done:     fn (s &State) {
+			unsafe { s.n_cm_done++ }
+		}
+		tf_named: fn (s &State, tf u32) {
+			unsafe {
+				if tf & u32(wl.WpColorManagerV1TransferFunction.st2084_pq) != 0 {
+					s.is_hdr = true
+				}
+			}
+		}
+	}
 }
-
-const cm_output_listener = cm.wpcolormanagementoutputv1_listener(handle_cm_output_image_description_changed)

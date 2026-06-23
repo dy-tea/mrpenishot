@@ -1,27 +1,25 @@
 module main
 
-import protocols.wayland as wlp
+import dy_tea.wayland as wl
 
-fn output_handle_geometry(mut output Output, obj voidptr, x int, y int, physical_width int, physical_height int, subpixel int, make &char, model &char, transform int) {
-	output.x = x
-	output.y = y
-	output.transform = unsafe { wlp.WlOutput_Transform(transform) }
-}
-
-fn output_handle_mode(mut output Output, obj voidptr, flags u32, width int, height int, refresh int) {
-	if flags & u32(wlp.WlOutput_Mode.current) != 0 {
-		output.mode_width = width
-		output.mode_height = height
+fn make_output_events() wl.WlOutputEvents[&Output] {
+	return wl.WlOutputEvents[&Output]{
+		geometry: fn (mut o Output, x i32, y i32, physical_width i32, physical_height i32, subpixel i32, make string, model string, transform i32) {
+			o.x = int(x)
+			o.y = int(y)
+			o.transform = transform
+		}
+		mode:     fn (mut o Output, flags u32, width i32, height i32, refresh i32) {
+			if flags & 1 != 0 {
+				o.mode_width = int(width)
+				o.mode_height = int(height)
+			}
+		}
+		scale:    fn (mut o Output, factor i32) {
+			o.scale = int(factor)
+		}
+		name:     fn (mut o Output, name string) {
+			o.name = name
+		}
 	}
 }
-
-fn output_handle_scale(mut output Output, obj voidptr, factor int) {
-	output.scale = factor
-}
-
-fn output_handle_name(mut output Output, obj voidptr, name &char) {
-	output.name = unsafe { name.vstring() }
-}
-
-const output_listener = wlp.wloutput_listener(output_handle_geometry, output_handle_mode,
-	none, output_handle_scale, output_handle_name, none)

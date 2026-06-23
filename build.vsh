@@ -40,58 +40,17 @@ fn pkg_installed(name string, version ?string) {
 	}
 }
 
-protocols_dir := './protocols'
-vscanner_dir := './vscanner'
 exe_name := 'mrpenishot'
-
-if arguments().contains('clean') {
-	cmd := 'rm -r ${protocols_dir}/*/'
-	execute(cmd)
-	println('❯ ${cmd}')
-	return
-}
 
 program_installed('pkg-config')
 
-pkg_installed('wayland-protocols', '1.41')
-pkg_installed('wayland-client', none)
 pkg_installed('pixman-1', none)
 pkg_installed('libjxl', none)
 pkg_installed('libpng16', '2.5.0')
-
-// build vscanner
-sh('v ${vscanner_dir}')
-
-wl_dir := sh('pkg-config --variable=pkgdatadir wayland-client').trim_space()
-wl_proto_dir := sh('pkg-config --variable=pkgdatadir wayland-protocols').trim_space()
-
-protocols := [
-	wl_dir + '/wayland.xml',
-	wl_proto_dir + '/stable/xdg-shell/xdg-shell.xml',
-	wl_proto_dir + '/stable/viewporter/viewporter.xml',
-	wl_proto_dir + '/staging/color-management/color-management-v1.xml',
-	wl_proto_dir + '/staging/ext-image-capture-source/ext-image-capture-source-v1.xml',
-	wl_proto_dir + '/staging/ext-image-copy-capture/ext-image-copy-capture-v1.xml',
-	wl_proto_dir + '/staging/ext-foreign-toplevel-list/ext-foreign-toplevel-list-v1.xml',
-	wl_proto_dir + '/unstable/xdg-output/xdg-output-unstable-v1.xml',
-	'protocols/wlr-layer-shell-unstable-v1.xml',
-]
-
-sh('mkdir -p ${protocols_dir}')
-
-if !os.exists('${protocols_dir}/vscanner_wl_types.h') {
-	sh('cp ./protocols/vscanner_wl_types.h ${protocols_dir}/')
-}
-
-for protocol in protocols {
-	name := base(protocol).replace('.xml', '').replace('-', '_')
-	sh('${vscanner_dir}/vscanner ${protocol} ${protocols_dir}/${name}')
-}
 
 if arguments().contains('install') {
 	sh('v -prod .')
 	user := sh('logname').trim_space()
 	sh('chown ${user}:${user} ./${exe_name}')
-	sh('chown -R ${user}:${user} ./${protocols_dir}')
 	sh('cp ./${exe_name} /usr/local/bin/${exe_name}')
 }
