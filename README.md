@@ -14,7 +14,7 @@ _Wayland screenshot application written in the V programming language_
 
 ### Building
 ```sh
-v install # if dependencies are not installed
+git clone https://github.com/dy-tea/wayland.git ~/.vmodules/wayland
 v .  # build
 ```
 
