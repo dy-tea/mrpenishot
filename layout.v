@@ -1,7 +1,7 @@
 module main
 
 import math
-import protocols.wayland as wlp
+import wayland.protocols.wayland as wl
 
 fn (state &State) get_extents() Geometry {
 	mut x1 := math.maxof[int]()
@@ -27,25 +27,26 @@ fn (state &State) get_extents() Geometry {
 	return Geometry{x1, y1, x2 - x1, y2 - y1}
 }
 
-fn transform_output(transform wlp.WlOutput_Transform, width int, height int) (int, int) {
-	if int(transform) & int(wlp.WlOutput_Transform._90) != 0 {
+fn transform_output(transform u32, width int, height int) (int, int) {
+	base := transform & 3
+	if base == 1 || base == 3 {
 		return height, width
 	}
 	return width, height
 }
 
-fn get_output_rotation(transform wlp.WlOutput_Transform) f64 {
-	base := int(transform) & ~int(wlp.WlOutput_Transform.flipped)
+fn get_output_rotation(transform u32) f64 {
+	base := transform & ~u32(wl.wl_output_transform_flipped)
 	return match base {
-		int(wlp.WlOutput_Transform._90) { math.pi / 2 }
-		int(wlp.WlOutput_Transform._180) { math.pi }
-		int(wlp.WlOutput_Transform._270) { 3 * math.pi / 2 }
+		wl.wl_output_transform_num_90 { math.pi / 2 }
+		wl.wl_output_transform_num_180 { math.pi }
+		wl.wl_output_transform_num_270 { 3 * math.pi / 2 }
 		else { 0 }
 	}
 }
 
-fn get_output_flipped(transform wlp.WlOutput_Transform) int {
-	if int(transform) & int(wlp.WlOutput_Transform.flipped) != 0 {
+fn get_output_flipped(transform u32) int {
+	if transform & u32(wl.wl_output_transform_flipped) != 0 {
 		return -1
 	}
 	return 1

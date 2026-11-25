@@ -77,18 +77,18 @@ pub fn C.JxlEncoderDestroy(enc &C.JxlEncoder)
 pub fn C.JxlEncoderSetCms(enc &C.JxlEncoder, cms &C.JxlCmsInterface)
 pub fn C.JxlEncoderSetParallelRunner(enc &C.JxlEncoder, parallel_runner JxlParallelRunner, parallel_runner_opaque voidptr) JxlEncoderStatus
 pub fn C.JxlEncoderGetError(enc &C.JxlEncoder) JxlEncoderError
-pub fn C.JxlEncoderProcessOutput(enc &C.JxlEncoder, next_out &&u8, avail_out &usize) JxlEncoderStatus
+pub fn C.JxlEncoderProcessOutput(enc &C.JxlEncoder, next_out &voidptr, avail_out &uint) JxlEncoderStatus
 pub fn C.JxlEncoderSetFrameHeader(frame_settings &C.JxlEncoderFrameSettings, frame_header &C.JxlFrameHeader) JxlEncoderStatus
-pub fn C.JxlEncoderSetExtraChannelBlendInfo(frame_settings &C.JxlEncoderFrameSettings, index usize, blend_info &C.JxlBlendInfo) JxlEncoderStatus
+pub fn C.JxlEncoderSetExtraChannelBlendInfo(frame_settings &C.JxlEncoderFrameSettings, index uint, blend_info &C.JxlBlendInfo) JxlEncoderStatus
 pub fn C.JxlEncoderSetFrameName(frame_settings &C.JxlEncoderFrameSettings, frame_name &char) JxlEncoderStatus
 pub fn C.JxlEncoderSetFrameBitDepth(frame_settings &C.JxlEncoderFrameSettings, bit_depth &C.JxlBitDepth) JxlEncoderStatus
-pub fn C.JxlEncoderAddJPEGFrame(frame_settings &C.JxlEncoderFrameSettings, buffer &u8, size usize) JxlEncoderStatus
-pub fn C.JxlEncoderAddImageFrame(frame_settings &C.JxlEncoderFrameSettings, pixel_format &C.JxlPixelFormat, buffer voidptr, size usize) JxlEncoderStatus
+pub fn C.JxlEncoderAddJPEGFrame(frame_settings &C.JxlEncoderFrameSettings, buffer &u8, size uint) JxlEncoderStatus
+pub fn C.JxlEncoderAddImageFrame(frame_settings &C.JxlEncoderFrameSettings, pixel_format &C.JxlPixelFormat, buffer voidptr, size uint) JxlEncoderStatus
 
 pub struct C.JxlEncoderOutputProcessor {
 	opaque                 voidptr
-	get_buffer             fn (opaque voidptr, size &usize) voidptr
-	release_buffer         fn (opaque voidptr, written_bytes usize)
+	get_buffer             fn (opaque voidptr, size &uint) voidptr
+	release_buffer         fn (opaque voidptr, written_bytes uint)
 	seek                   fn (opaque voidptr, position u64)
 	set_finalized_position fn (opaque voidptr, finalized_position u64)
 }
@@ -99,46 +99,46 @@ pub fn C.JxlEncoderFlushInput(encoder &C.JxlEncoder) JxlEncoderStatus
 pub struct C.JxlChunkedFrameInputSource {
 	opaque                          voidptr
 	get_color_channels_pixel_format fn (opaque voidptr, pixel_format &C.JxlPixelFormat) voidptr
-	get_color_channel_data_at       fn (opaque voidptr, xpos usize, ypos usize, xsize usize, ysize usize, row_offset &usize) voidptr
-	get_extra_channel_pixel_format  fn (opaque voidptr, ec_index usize, pixel_format &C.JxlPixelFormat)
-	get_extra_channel_data_at       fn (opaque voidptr, ec_index usize, xpos usize, ypos usize, xsize usize, ysize usize, row_offset &usize) voidptr
+	get_color_channel_data_at       fn (opaque voidptr, xpos uint, ypos uint, xsize uint, ysize uint, row_offset &uint) voidptr
+	get_extra_channel_pixel_format  fn (opaque voidptr, ec_index uint, pixel_format &C.JxlPixelFormat)
+	get_extra_channel_data_at       fn (opaque voidptr, ec_index uint, xpos uint, ypos uint, xsize uint, ysize uint, row_offset &uint) voidptr
 	release_buffer                  fn (opaque voidptr, buf voidptr)
 }
 
-pub fn C.JxlEncoderAddChunkedFrame(frame_settings &C.JxlEncoderFrameSettings, is_last_frame bool, chunked_frame_input &C.JxlChunkedFrameInputSource) JxlEncoderStatus
-pub fn C.JxlEncoderSetExtraChannelBuffer(frame_settings &C.JxlEncoderFrameSettings, pixel_format &C.JxlPixelFormat, buffer voidptr, size usize, index u32) JxlEncoderStatus
-pub fn C.JxlEncoderAddBox(enc &C.JxlEncoder, type, JxlBoxType, contents &u8, size usize, compress_box bool) JxlEncoderStatus
+pub fn C.JxlEncoderAddChunkedFrame(frame_settings &C.JxlEncoderFrameSettings, is_last_frame int, chunked_frame_input &C.JxlChunkedFrameInputSource) JxlEncoderStatus
+pub fn C.JxlEncoderSetExtraChannelBuffer(frame_settings &C.JxlEncoderFrameSettings, pixel_format &C.JxlPixelFormat, buffer voidptr, size uint, index u32) JxlEncoderStatus
+pub fn C.JxlEncoderAddBox(enc &C.JxlEncoder, type &u8, JxlBoxType &u8, contents &u8, size uint, compress_box int) JxlEncoderStatus
 pub fn C.JxlEncoderUseBoxes(enc &C.JxlEncoder) JxlEncoderStatus
 pub fn C.JxlEncoderCloseBoxes(enc &C.JxlEncoder)
 pub fn C.JxlEncoderCloseFrames(enc &C.JxlEncoder)
 pub fn C.JxlEncoderCloseInput(enc &C.JxlEncoder)
 pub fn C.JxlEncoderSetColorEncoding(enc &C.JxlEncoder, color &C.JxlColorEncoding) JxlEncoderStatus
-pub fn C.JxlEncoderSetICCProfile(enc &C.JxlEncoder, icc_profile &u8, size usize) JxlEncoderStatus
+pub fn C.JxlEncoderSetICCProfile(enc &C.JxlEncoder, icc_profile &u8, size uint) JxlEncoderStatus
 pub fn C.JxlEncoderInitBasicInfo(info &C.JxlBasicInfo)
 pub fn C.JxlEncoderInitFrameHeader(frame_header &C.JxlFrameHeader)
 pub fn C.JxlEncoderInitBlendInfo(blend_info &C.JxlBlendInfo)
 pub fn C.JxlEncoderSetBasicInfo(enc &C.JxlEncoder, info &C.JxlBasicInfo) JxlEncoderStatus
 pub fn C.JxlEncoderSetUpsamplingMode(enc &C.JxlEncoder, factor i64, mode i64) JxlEncoderStatus
 pub fn C.JxlEncoderInitExtraChannelInfo(enc &C.JxlEncoder, info &C.JxlExtraChannelInfo) JxlEncoderStatus
-pub fn C.JxlEncoderSetExtraChannelInfo(enc &C.JxlEncoder, index usize, info &C.JxlExtraChannelInfo) JxlEncoderStatus
-pub fn C.JxlEncoderSetExtraChannelName(enc &C.JxlEncoder, index usize, name &C.char, size usize) JxlEncoderStatus
+pub fn C.JxlEncoderSetExtraChannelInfo(enc &C.JxlEncoder, index uint, info &C.JxlExtraChannelInfo) JxlEncoderStatus
+pub fn C.JxlEncoderSetExtraChannelName(enc &C.JxlEncoder, index uint, name &C.char, size uint) JxlEncoderStatus
 pub fn C.JxlEncoderFrameSettingsSetOption(frame_settings &C.JxlEncoderFrameSettings, option JxlEncoderFrameSettingId, value i64) JxlEncoderStatus
 pub fn C.JxlEncoderFrameSettingsSetFloatOption(frame_settings &C.JxlEncoderFrameSettings, option JxlEncoderFrameSettingId, value f32) JxlEncoderStatus
-pub fn C.JxlEncoderUseContainer(enc &C.JxlEncoder, use_container bool) JxlEncoderStatus
-pub fn C.JxlEncoderStoreJPEGMetadata(enc &C.JxlEncoder, store_jpeg_metadata bool) JxlEncoderStatus
+pub fn C.JxlEncoderUseContainer(enc &C.JxlEncoder, use_container int) JxlEncoderStatus
+pub fn C.JxlEncoderStoreJPEGMetadata(enc &C.JxlEncoder, store_jpeg_metadata int) JxlEncoderStatus
 pub fn C.JxlEncoderSetCodestreamLevel(enc &C.JxlEncoder, level int) JxlEncoderStatus
 pub fn C.JxlEncoderGetRequiredCodestreamLevel(enc &C.JxlEncoder) int
-pub fn C.JxlEncoderSetLossless(enc &C.JxlEncoder, lossless bool) JxlEncoderStatus
-pub fn C.JxlEncoderSetFrameLossless(frame_settings &C.JxlEncoderFrameSettings, lossless bool) JxlEncoderStatus
+pub fn C.JxlEncoderSetLossless(enc &C.JxlEncoder, lossless int) JxlEncoderStatus
+pub fn C.JxlEncoderSetFrameLossless(frame_settings &C.JxlEncoderFrameSettings, lossless int) JxlEncoderStatus
 pub fn C.JxlEncoderSetFrameDistance(frame_settings &C.JxlEncoderFrameSettings, distance f32) JxlEncoderStatus
-pub fn C.JxlEncoderSetExtraChannelDistance(frame_settings &C.JxlEncoderFrameSettings, index usize, distance f32) JxlEncoderStatus
+pub fn C.JxlEncoderSetExtraChannelDistance(frame_settings &C.JxlEncoderFrameSettings, index uint, distance f32) JxlEncoderStatus
 pub fn C.JxlEncoderDistanceFromQuality(quality f32) f32
 pub fn C.JxlEncoderFrameSettingsCreate(enc &C.JxlEncoder, source &C.JxlEncoderFrameSettings) &C.JxlEncoderFrameSettings
-pub fn C.JxlColorEncodingSetToSRGB(color_encoding &C.JxlColorEncoding, is_gray bool) JxlEncoderStatus
-pub fn C.JxlColorEncodingSetToLinearSRGB(color_encoding &C.JxlColorEncoding, is_gray bool)
+pub fn C.JxlColorEncodingSetToSRGB(color_encoding &C.JxlColorEncoding, is_gray int) JxlEncoderStatus
+pub fn C.JxlColorEncodingSetToLinearSRGB(color_encoding &C.JxlColorEncoding, is_gray int)
 pub fn C.JxlEncoderAllowExpertOptions(enc &C.JxlEncoder)
 
-type JxlDebugImageCallback = fn (opaque voidptr, label &char, xsize usize, ysize usize, color &C.JxlColorEncoding, pixels &u16)
+type JxlDebugImageCallback = fn (opaque voidptr, label &char, xsize uint, ysize uint, color &C.JxlColorEncoding, pixels &u16)
 
 pub fn C.JxlEncoderSetDebugImageCallback(enc &C.JxlEncoder, callback JxlDebugImageCallback, opaque voidptr)
 pub fn C.JxlEncoderCollectStats(frame_settings &C.JxlEncoderFrameSettings, stats &C.JxlEncoderStats)

@@ -1,80 +1,80 @@
 module main
 
 import math
-import protocols.wayland as wlp
+import wayland.protocols.wayland as wl
 import pixman as px
 
-fn get_pixman_format(wl_fmt wlp.WlShm_Format) !px.Pixman_format_code_t {
+fn get_pixman_format(wl_fmt u32) !px.Pixman_format_code_t {
 	return match wl_fmt {
 		// 32-bit formats
-		.argb8888 {
+		wl.wl_shm_format_argb8888 {
 			px.Pixman_format_code_t.a8r8g8b8
 		}
-		.xrgb8888 {
+		wl.wl_shm_format_xrgb8888 {
 			px.Pixman_format_code_t.x8r8g8b8
 		}
-		.abgr8888 {
+		wl.wl_shm_format_abgr8888 {
 			px.Pixman_format_code_t.a8b8g8r8
 		}
-		.xbgr8888 {
+		wl.wl_shm_format_xbgr8888 {
 			px.Pixman_format_code_t.x8b8g8r8
 		}
-		.bgra8888 {
+		wl.wl_shm_format_bgra8888 {
 			px.Pixman_format_code_t.b8g8r8a8
 		}
-		.bgrx8888 {
+		wl.wl_shm_format_bgrx8888 {
 			px.Pixman_format_code_t.b8g8r8x8
 		}
-		.rgba8888 {
+		wl.wl_shm_format_rgba8888 {
 			px.Pixman_format_code_t.r8g8b8a8
 		}
-		.rgbx8888 {
+		wl.wl_shm_format_rgbx8888 {
 			px.Pixman_format_code_t.r8g8b8x8
 		}
 		// 30-bit/32-bit HDR formats
-		.argb2101010 {
+		wl.wl_shm_format_argb2101010 {
 			px.Pixman_format_code_t.a2r10g10b10
 		}
-		.xrgb2101010 {
+		wl.wl_shm_format_xrgb2101010 {
 			px.Pixman_format_code_t.x2r10g10b10
 		}
-		.abgr2101010 {
+		wl.wl_shm_format_abgr2101010 {
 			px.Pixman_format_code_t.a2b10g10r10
 		}
-		.xbgr2101010 {
+		wl.wl_shm_format_xbgr2101010 {
 			px.Pixman_format_code_t.x2b10g10r10
 		}
 		// 24-bit formats
-		.rgb888 {
+		wl.wl_shm_format_rgb888 {
 			px.Pixman_format_code_t.r8g8b8
 		}
-		.bgr888 {
+		wl.wl_shm_format_bgr888 {
 			px.Pixman_format_code_t.b8g8r8
 		}
 		// 16-bit formats
-		.rgb565 {
+		wl.wl_shm_format_rgb565 {
 			px.Pixman_format_code_t.r5g6b5
 		}
-		.bgr565 {
+		wl.wl_shm_format_bgr565 {
 			px.Pixman_format_code_t.b5g6r5
 		}
-		.argb4444 {
+		wl.wl_shm_format_argb4444 {
 			px.Pixman_format_code_t.a4r4g4b4
 		}
-		.xrgb4444 {
+		wl.wl_shm_format_xrgb4444 {
 			px.Pixman_format_code_t.x4r4g4b4
 		}
-		.argb1555 {
+		wl.wl_shm_format_argb1555 {
 			px.Pixman_format_code_t.a1r5g5b5
 		}
-		.xrgb1555 {
+		wl.wl_shm_format_xrgb1555 {
 			px.Pixman_format_code_t.x1r5g5b5
 		}
 		// 8-bit formats
-		.rgb332 {
+		wl.wl_shm_format_rgb332 {
 			px.Pixman_format_code_t.r3g3b2
 		}
-		.bgr233 {
+		wl.wl_shm_format_bgr233 {
 			px.Pixman_format_code_t.b2g3r3
 		}
 		else {
@@ -83,7 +83,7 @@ fn get_pixman_format(wl_fmt wlp.WlShm_Format) !px.Pixman_format_code_t {
 	}
 }
 
-fn get_min_stride(f wlp.WlShm_Format, width u32) u32 {
+fn get_min_stride(f u32, width u32) u32 {
 	format := get_pixman_format(f) or { px.Pixman_format_code_t.b8g8r8a8 }
 	bpp := px.pixman_format_bpp(int(format))
 	if bpp == 24 {
@@ -103,34 +103,20 @@ fn compute_composite_region(out2com &C.pixman_f_transform, output_width int, out
 	mut corner2 := C.pixman_vector{}
 	mut corner3 := C.pixman_vector{}
 
-	unsafe {
-		corner0.vector[0] = 0
-		corner0.vector[1] = 0
-		corner0.vector[2] = px.pixman_fixed_1
+	corner0.vector = [C.pixman_fixed_t(0), C.pixman_fixed_t(0), px.pixman_fixed_1]!
+	corner1.vector = [w, C.pixman_fixed_t(0), px.pixman_fixed_1]!
+	corner2.vector = [C.pixman_fixed_t(0), h, px.pixman_fixed_1]!
+	corner3.vector = [w, h, px.pixman_fixed_1]!
 
-		corner1.vector[0] = w
-		corner1.vector[1] = 0
-		corner1.vector[2] = px.pixman_fixed_1
-
-		corner2.vector[0] = 0
-		corner2.vector[1] = h
-		corner2.vector[2] = px.pixman_fixed_1
-
-		corner3.vector[0] = w
-		corner3.vector[1] = h
-		corner3.vector[2] = px.pixman_fixed_1
-	}
 	mut x_min := i32(math.maxof[i32]())
 	mut x_max := i32(math.minof[i32]())
 	mut y_min := i32(math.maxof[i32]())
 	mut y_max := i32(math.minof[i32]())
 
-	unsafe {
-		C.pixman_transform_point(&o2c_fixedpt, &corner0)
-		C.pixman_transform_point(&o2c_fixedpt, &corner1)
-		C.pixman_transform_point(&o2c_fixedpt, &corner2)
-		C.pixman_transform_point(&o2c_fixedpt, &corner3)
-	}
+	C.pixman_transform_point(&o2c_fixedpt, &corner0)
+	C.pixman_transform_point(&o2c_fixedpt, &corner1)
+	C.pixman_transform_point(&o2c_fixedpt, &corner2)
+	C.pixman_transform_point(&o2c_fixedpt, &corner3)
 	for corner in [corner0, corner1, corner2, corner3] {
 		if corner.vector[0] < x_min {
 			x_min = corner.vector[0]
@@ -165,8 +151,8 @@ fn compute_composite_region(out2com &C.pixman_f_transform, output_width int, out
 }
 
 @[direct_array_access]
-fn render(state &State, geometry &Geometry, scale f64, fully_opaque bool) !&C.pixman_image_t {
-	null := unsafe { nil }
+fn render(state &State, geometry &Geometry, scale f64, fully_opaque bool) !voidptr {
+	null := voidptr(0)
 	common_format := if state.is_hdr {
 		if fully_opaque {
 			px.Pixman_format_code_t.x2r10g10b10
@@ -204,7 +190,7 @@ fn render(state &State, geometry &Geometry, scale f64, fully_opaque bool) !&C.pi
 		1, &rect)
 
 	for capture in state.captures {
-		buffer := capture.buffer or { continue }
+		mut buffer := capture.buffer or { continue }
 
 		mut pixman_fmt := get_pixman_format(buffer.shm_format) or {
 			return error('unsupported format ${buffer.shm_format}')
@@ -219,12 +205,16 @@ fn render(state &State, geometry &Geometry, scale f64, fully_opaque bool) !&C.pi
 			}
 		}
 
-		unsafe {
-			mut p := &u32(buffer.data)
+		// Some captures arrive with black pixels that have no alpha; clear the
+		// alpha of those pixels too, so they do not paint over other captures.
+		// Only 32 bit formats have an alpha byte to clear.
+		if px.pixman_format_bpp(int(pixman_fmt)) == 32 {
+			mut pixels := buffer.pixels()
 			num_pixels := (buffer.stride / 4) * buffer.height
 			for i in 0 .. num_pixels {
-				if (p[i] & 0x00FFFFFF) == 0 {
-					p[i] = 0
+				offset := i * 4
+				if pixels[offset] == 0 && pixels[offset + 1] == 0 && pixels[offset + 2] == 0 {
+					pixels[offset + 3] = 0
 				}
 			}
 		}
@@ -242,7 +232,7 @@ fn render(state &State, geometry &Geometry, scale f64, fully_opaque bool) !&C.pi
 		output_flipped_y := 1
 
 		output_image := C.pixman_image_create_bits(pixman_fmt, buffer.width, buffer.height,
-			buffer.data, buffer.stride)
+			buffer.pixels().data, buffer.stride)
 		if output_image == null {
 			C.pixman_image_unref(common_image)
 			return error('Failed to create output image')

@@ -21,7 +21,7 @@ pub struct C.JxlPixelFormat {
 	num_channels u32
 	data_type    JxlDataType
 	endianness   JxlEndianness
-	align        usize
+	align        uint
 }
 
 pub enum JxlBitDepthType {

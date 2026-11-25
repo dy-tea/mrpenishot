@@ -1,27 +1,32 @@
 module main
 
-import protocols.xdg_output_unstable_v1 as xo
+import wayland.protocols.xdg_output_unstable_v1 as xo
 
-fn xdg_output_handle_logical_position(mut output Output, obj voidptr, x int, y int) {
-	output.logical_geometry.x = x
-	output.logical_geometry.y = y
+struct XdgOutputListener {
+mut:
+	output &Output
 }
 
-fn xdg_output_handle_logical_size(mut output Output, obj voidptr, width int, height int) {
-	output.logical_geometry.width = width
-	output.logical_geometry.height = height
+fn (mut l XdgOutputListener) logical_position(_ xo.ZxdgOutputV1, x i32, y i32) {
+	l.output.logical_geometry.x = int(x)
+	l.output.logical_geometry.y = int(y)
 }
 
-fn xdg_output_handle_done(mut output Output, obj voidptr) {
-	width, _ := transform_output(output.transform, output.mode_width, output.mode_height)
-	output.logical_scale = f64(width) / output.logical_geometry.width
+fn (mut l XdgOutputListener) logical_size(_ xo.ZxdgOutputV1, width i32, height i32) {
+	l.output.logical_geometry.width = int(width)
+	l.output.logical_geometry.height = int(height)
 }
 
-fn xdg_output_handle_name(mut output Output, obj voidptr, name &char) {
-	if output.name == '' {
-		output.name = unsafe { name.vstring() }
+fn (mut l XdgOutputListener) done(_ xo.ZxdgOutputV1) {
+	width, _ := transform_output(l.output.transform, l.output.mode_width, l.output.mode_height)
+	l.output.logical_scale = f64(width) / l.output.logical_geometry.width
+}
+
+fn (mut l XdgOutputListener) name(_ xo.ZxdgOutputV1, name string) {
+	if l.output.name == '' {
+		l.output.name = name
 	}
 }
 
-const xdg_output_listener = xo.zxdgoutputv1_listener(xdg_output_handle_logical_position,
-	xdg_output_handle_logical_size, xdg_output_handle_done, xdg_output_handle_name, none)
+fn (mut l XdgOutputListener) description(_ xo.ZxdgOutputV1, _ string) {
+}

@@ -1,78 +1,97 @@
 module main
 
 import math
-import protocols.wayland as wlp
-import protocols.ext_image_copy_capture_v1 as cc
+import wayland.protocols.wayland as wl
+import wayland.protocols.ext_image_copy_capture_v1 as cc
 
-fn frame_handle_transform(mut capture Capture, obj voidptr, transform u32) {
-	capture.transform = unsafe { wlp.WlOutput_Transform(transform) }
+struct FrameListener {
+mut:
+	capture &Capture
 }
 
-fn frame_handle_ready(mut capture Capture, obj voidptr) {
-	capture.state.n_done++
+fn (mut l FrameListener) transform(_ cc.ExtImageCopyCaptureFrameV1, transform u32) {
+	l.capture.transform = transform
 }
 
-fn frame_handle_failed(mut capture Capture, obj voidptr, reason u32) {
-	name := if output := capture.output { output.name } else { 'unknown' }
+fn (mut l FrameListener) damage(_ cc.ExtImageCopyCaptureFrameV1, _ i32, _ i32, _ i32, _ i32) {
+}
+
+fn (mut l FrameListener) presentation_time(_ cc.ExtImageCopyCaptureFrameV1, _ u32, _ u32, _ u32) {
+}
+
+fn (mut l FrameListener) ready(_ cc.ExtImageCopyCaptureFrameV1) {
+	l.capture.state.n_done++
+}
+
+fn (mut l FrameListener) failed(_ cc.ExtImageCopyCaptureFrameV1, reason u32) {
+	name := if output := l.capture.output { output.name } else { 'unknown' }
 	panic('failed to copy output ${name}, reason: ${reason}')
 }
 
-const frame_listener = cc.extimagecopycaptureframev1_listener(frame_handle_transform,
-	none, none, frame_handle_ready, frame_handle_failed)
+struct SessionListener {
+mut:
+	capture &Capture
+}
 
-fn session_handle_buffer_size(mut capture Capture, obj voidptr, width u32, height u32) {
-	capture.buffer_width = width
-	capture.buffer_height = height
-	if capture.output == none {
-		capture.logical_geometry.width = int(width)
-		capture.logical_geometry.height = int(height)
+fn (mut l SessionListener) dmabuf_device(_ cc.ExtImageCopyCaptureSessionV1, _ []u8) {
+}
+
+fn (mut l SessionListener) dmabuf_format(_ cc.ExtImageCopyCaptureSessionV1, _ u32, _ []u8) {
+}
+
+fn (mut l SessionListener) stopped(_ cc.ExtImageCopyCaptureSessionV1) {
+}
+
+fn (mut l SessionListener) buffer_size(_ cc.ExtImageCopyCaptureSessionV1, width u32, height u32) {
+	l.capture.buffer_width = width
+	l.capture.buffer_height = height
+	if l.capture.output == none {
+		l.capture.logical_geometry.width = int(width)
+		l.capture.logical_geometry.height = int(height)
 	}
 }
 
-fn session_handle_shm_format(mut capture Capture, obj voidptr, format u32) {
-	fmt := unsafe { wlp.WlShm_Format(format) }
-	is_toplevel := capture.toplevel != none
-	if current_fmt := capture.shm_format {
-		if is_toplevel && is_alpha_format(fmt) {
+fn (mut l SessionListener) shm_format(_ cc.ExtImageCopyCaptureSessionV1, format u32) {
+	is_toplevel := l.capture.toplevel != none
+	if current_fmt := l.capture.shm_format {
+		if is_toplevel && is_alpha_format(format) {
 			if !is_alpha_format(current_fmt) {
-				get_pixman_format(fmt) or { return }
-				capture.shm_format = fmt
+				get_pixman_format(format) or { return }
+				l.capture.shm_format = format
 			}
 		}
 		return
 	}
-	get_pixman_format(fmt) or { return }
-	capture.shm_format = fmt
+	get_pixman_format(format) or { return }
+	l.capture.shm_format = format
 }
 
-fn session_handle_done(mut capture Capture, obj voidptr) {
-	if capture.ext_image_copy_capture_frame_v1 != none {
+fn (mut l SessionListener) done(_ cc.ExtImageCopyCaptureSessionV1) {
+	if l.capture.ext_image_copy_capture_frame_v1 != none {
 		return
 	}
-	shm_format := capture.shm_format or { panic('no supported shm format found') }
-	mut shm := capture.state.shm or { return }
+	shm_format := l.capture.shm_format or { panic('no supported shm format found') }
+	mut shm := l.capture.state.shm or { return }
 
-	stride := get_min_stride(shm_format, capture.buffer_width)
-	capture.buffer = Buffer.new(mut shm, shm_format, int(capture.buffer_width), int(capture.buffer_height),
+	stride := get_min_stride(shm_format, l.capture.buffer_width)
+	l.capture.buffer = Buffer.new(mut shm, shm_format, int(l.capture.buffer_width), int(l.capture.buffer_height),
 		int(stride))
 
-	mut sess := capture.ext_image_copy_capture_session_v1 or { return }
-	mut frame := sess.create_frame()
-	capture.ext_image_copy_capture_frame_v1 = frame
-	frame.add_listener(&frame_listener, capture)
-
-	mut buffer := capture.buffer or { return }
-	frame.attach_buffer(buffer.wl_buffer.proxy)
+	mut sess := l.capture.ext_image_copy_capture_session_v1 or { return }
+	mut frame := sess.create_frame() or { return }
+	l.capture.ext_image_copy_capture_frame_v1 = frame
+	frame.set_listener(&FrameListener{
+		capture: l.capture
+	}) or {}
+	mut buffer := l.capture.buffer or { return }
+	frame.attach_buffer(buffer.wl_buffer) or {}
 	i32_max := math.maxof[i32]()
-	frame.damage_buffer(0, 0, i32_max, i32_max)
-	frame.capture()
+	frame.damage_buffer(0, 0, i32_max, i32_max) or {}
+	frame.capture() or {}
 }
 
-const session_listener = cc.extimagecopycapturesessionv1_listener(session_handle_buffer_size,
-	session_handle_shm_format, none, none, session_handle_done, none)
-
-fn is_alpha_format(format wlp.WlShm_Format) bool {
-	alpha_formats := [wlp.WlShm_Format.argb8888, .abgr8888, .bgra8888, .rgba8888, .argb2101010,
-		.abgr2101010]
+fn is_alpha_format(format u32) bool {
+	alpha_formats := [wl.wl_shm_format_argb8888, wl.wl_shm_format_abgr8888, wl.wl_shm_format_bgra8888,
+		wl.wl_shm_format_rgba8888, wl.wl_shm_format_argb2101010, wl.wl_shm_format_abgr2101010]
 	return format in alpha_formats
 }

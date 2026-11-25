@@ -3,5 +3,5 @@ Module {
 	description: ''
 	version: '1.3.2'
 	license: 'GPL-3.0'
-	dependencies: []
+	dependencies: ['dy-tea.wayland']
 }

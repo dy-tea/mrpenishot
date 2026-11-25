@@ -47,29 +47,29 @@ pub struct C.JxlAnimationHeader {
 	tps_numerator   u32
 	tps_denominator u32
 	num_loops       u32
-	have_timecodes  bool
+	have_timecodes  int
 }
 
 @[typedef]
 pub struct C.JxlBasicInfo {
-	have_container           bool
+	have_container           int
 	xsize                    u32
 	ysize                    u32
 	bits_per_sample          u32
 	exponent_bits_per_sample u32
 	intensity_target         f32
 	min_nits                 f32
-	relative_to_max_display  bool
+	relative_to_max_display  int
 	linear_below             f32
-	uses_original_profile    bool
-	have_preview             bool
-	have_animation           bool
+	uses_original_profile    int
+	have_preview             int
+	have_animation           int
 	orientation              JxlOrientation
 	num_color_channels       u32
 	num_extra_channels       u32
 	alpha_bits               u32
 	alpha_exponent_bits      u32
-	alpha_premultiplied      bool
+	alpha_premultiplied      int
 	preview                  C.JxlPreviewHeader
 	animation                C.JxlAnimationHeader
 	intrinsic_xsize          u32
@@ -84,7 +84,7 @@ pub struct C.JxlExtraChannelInfo {
 	exponent_bits_per_sample u32
 	dim_shift                u32
 	name_length              u32
-	alpha_premultiplied      bool
+	alpha_premultiplied      int
 	spot_color               [4]f32
 	cfa_channel              u32
 }
@@ -107,12 +107,12 @@ pub struct C.JxlBlendInfo {
 	blendmode JxlBlendMode
 	source    u32
 	alpha     u32
-	clamp     bool
+	clamp     int
 }
 
 @[typedef]
 pub struct C.JxlLayerInfo {
-	have_crop         bool
+	have_crop         int
 	crop_x0           i32
 	crop_y0           i32
 	xsize             u32
@@ -126,6 +126,6 @@ pub struct C.JxlFrameHeader {
 	duration    u32
 	timecode    u32
 	name_length u32
-	is_last     bool
+	is_last     int
 	layer_info  C.JxlLayerInfo
 }

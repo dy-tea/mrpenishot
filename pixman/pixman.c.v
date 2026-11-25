@@ -43,7 +43,7 @@ pub fn pixman_fixed_to_double(f C.pixman_fixed_t) f64 {
 
 @[inline]
 pub fn pixman_double_to_fixed(d f64) C.pixman_fixed_t {
-	return d * 65536.0
+	return C.pixman_fixed_t(d * 65536.0)
 }
 
 @[inline]
@@ -110,9 +110,9 @@ pub struct C.pixman_transform {
 }
 
 @[typedef]
-pub struct C.pixman_image {}
+pub union C.pixman_image {}
 
-pub type C.pixman_image_t = C.pixman_image
+pub type C.pixman_image_t = voidptr
 
 fn C.pixman_transform_init_identity(matrix &C.pixman_transform)
 fn C.pixman_transform_point_3d(transform &C.pixman_transform, vector &C.pixman_vector) C.pixman_bool_t
@@ -275,10 +275,10 @@ pub enum Pixman_region_overlap_t {
 // creation/destruction
 
 fn C.pixman_region_init(region &C.pixman_region16_t)
-fn C.pixman_region_init_rect(region &C.pixman_region16_t, x int, y int, width usize, height usize)
+fn C.pixman_region_init_rect(region &C.pixman_region16_t, x int, y int, width uint, height uint)
 fn C.pixman_region_init_rects(region &C.pixman_region16_t, boxes &C.pixman_box16_t, count int) C.pixman_bool_t
 fn C.pixman_init_with_extents(region &C.pixman_region16_t, extents &C.pixman_box16_t)
-fn C.pixman_region_init_from_image(region &C.pixman_region16_t, image &C.pixman_image_t)
+fn C.pixman_region_init_from_image(region &C.pixman_region16_t, image C.pixman_image_t)
 fn C.pixman_region_fini(region &C.pixman_region16_t)
 
 // manipulation
@@ -287,8 +287,8 @@ fn C.pixman_region_translate(region &C.pixman_region16_t, x int, y int)
 fn C.pixman_region_copy(dest &C.pixman_region16_t, source &C.pixman_region16_t) C.pixman_bool_t
 fn C.pixman_region_intersect(new_reg &C.pixman_region16_t, reg1 &C.pixman_region16_t, reg2 &C.pixman_region16_t) C.pixman_bool_t
 fn C.pixman_region_union(new_reg &C.pixman_region16_t, reg1 &C.pixman_region16_t, reg2 &C.pixman_region16_t) C.pixman_bool_t
-fn C.pixman_region_union_rect(dest &C.pixman_region16_t, source &C.pixman_region16_t, x int, y int, width usize, height usize) C.pixman_bool_t
-fn C.pixman_region_intersect_rect(dest &C.pixman_region16_t, source &C.pixman_region16_t, x int, y int, width usize, height usize) C.pixman_bool_t
+fn C.pixman_region_union_rect(dest &C.pixman_region16_t, source &C.pixman_region16_t, x int, y int, width uint, height uint) C.pixman_bool_t
+fn C.pixman_region_intersect_rect(dest &C.pixman_region16_t, source &C.pixman_region16_t, x int, y int, width uint, height uint) C.pixman_bool_t
 fn C.pixman_region_subtract(reg_d &C.pixman_region16_t, reg_m &C.pixman_region16_t, reg_s &C.pixman_region16_t) C.pixman_bool_t
 fn C.pixman_region_inverse(new_reg &C.pixman_region16_t, reg1 &C.pixman_region16_t, inv_rect &C.pixman_box16_6) C.pixman_bool_t
 fn C.pixman_region_contains_point(region &C.pixman_region16_t, x int, y int, box &C.pixman_box16_t) C.pixman_bool_t
@@ -337,10 +337,10 @@ pub struct C.pixman_region32 {
 // creation/destruction
 
 fn C.pixman_region32_init(region &C.pixman_region32_t)
-fn C.pixman_region32_init_rect(region &C.pixman_region32_t, x int, y int, width usize, height usize)
+fn C.pixman_region32_init_rect(region &C.pixman_region32_t, x int, y int, width uint, height uint)
 fn C.pixman_region32_init_rects(region &C.pixman_region32_t, boxes &C.pixman_box32_t, count int) C.pixman_bool_t
 fn C.pixman_region32_init_with_extents(region &C.pixman_region32_t, extents &C.pixman_box32_t)
-fn C.pixman_region32_init_from_image(region &C.pixman_region32_t, image &C.pixman_image_t)
+fn C.pixman_region32_init_from_image(region &C.pixman_region32_t, image C.pixman_image_t)
 fn C.pixman_region32_fini(region &C.pixman_region32_t)
 
 // manipulation
@@ -349,8 +349,8 @@ fn C.pixman_region32_translate(region &C.pixman_region32_t, x int, y int)
 fn C.pixman_region32_copy(region &C.pixman_region32_t, source &C.pixman_region32_t) C.pixman_bool_t
 fn C.pixman_region32_intersect(new_reg &C.pixman_region32_t, reg1 &C.pixman_region32_t, reg2 &C.pixman_region32_t) C.pixman_bool_t
 fn C.pixman_region32_union(new_reg &C.pixman_region32_t, reg1 &C.pixman_region32_t, reg2 &C.pixman_region32_t) C.pixman_bool_t
-fn C.pixman_region32_intersect_rect(dest &C.pixman_region32_t, source &C.pixman_region32_t, x int, y int, width usize, height usize) C.pixman_bool_t
-fn C.pixman_region32_union_rect(dest &C.pixman_region32_t, source &C.pixman_region32_t, x int, y int, width usize, height usize) C.pixman_bool_t
+fn C.pixman_region32_intersect_rect(dest &C.pixman_region32_t, source &C.pixman_region32_t, x int, y int, width uint, height uint) C.pixman_bool_t
+fn C.pixman_region32_union_rect(dest &C.pixman_region32_t, source &C.pixman_region32_t, x int, y int, width uint, height uint) C.pixman_bool_t
 fn C.pixman_region32_subtract(reg_d &C.pixman_region32_t, reg_m &C.pixman_region32_t, reg_s &C.pixman_region32_t) C.pixman_bool_t
 fn C.pixman_region32_inverse(new_reg &C.pixman_region32_t, reg1 &C.pixman_region32_t, inv_rect &C.pixman_box32_t) C.pixman_bool_t
 fn C.pixman_region32_contains_point(region &C.pixman_region32_t, x int, y int, box &C.pixman_box32_t) C.pixman_bool_t
@@ -399,11 +399,11 @@ pub struct C.pixman_region64f {
 // creation/destruction
 
 fn C.pixman_region64f_init(region &C.pixman_region64f_t)
-fn C.pixman_region64f_init_rect(region &C.pixman_region64f_t, x int, y int, width usize, height usize)
+fn C.pixman_region64f_init_rect(region &C.pixman_region64f_t, x int, y int, width uint, height uint)
 fn C.pixman_region64f_init_rectf(region &C.pixman_region64f_t, x f64, y f64, width f64, height f64)
 fn C.pixman_region64f_init_rects(region &C.pixman_region64f_t, boxes &C.pixman_box64f_t, count int) C.pixman_bool_t
 fn C.pixman_region64f_init_with_extents(region &C.pixman_region64f_t, extents &C.pixman_box64f_t)
-fn C.pixman_region64f_init_from_image(region &C.pixman_region64f_t, image &C.pixman_image_t)
+fn C.pixman_region64f_init_from_image(region &C.pixman_region64f_t, image C.pixman_image_t)
 fn C.pixman_region64f_fini(region &C.pixman_region64f_t)
 
 // manipulation
@@ -413,9 +413,9 @@ fn C.pixman_region64f_translatef(region &C.pixman_region64f_t, x f64, y f64)
 fn C.pixman_region64f_copy(dest &C.pixman_region64f_t, source &C.pixman_region64f_t) C.pixman_bool_t
 fn C.pixman_region64f_intersect(new_reg &C.pixman_region64f_t, reg1 &C.pixman_region64f_t, reg2 &C.pixman_region64f_t) C.pixman_bool_t
 fn C.pixman_region64f_union(new_reg &C.pixman_region64f_t, reg1 &C.pixman_region64f_t, reg2 &C.pixman_region64f_t) C.pixman_bool_t
-fn C.pixman_region64f_intersect_rect(dest &C.pixman_region64f_t, source &C.pixman_region64f_t, x int, y int, width usize, height usize) C.pixman_bool_t
+fn C.pixman_region64f_intersect_rect(dest &C.pixman_region64f_t, source &C.pixman_region64f_t, x int, y int, width uint, height uint) C.pixman_bool_t
 fn C.pixman_region64f_intersect_rectf(dest &C.pixman_region64f_t, source &C.pixman_region64f_t, x f64, y f64, width f64, height f64) C.pixman_bool_t
-fn C.pixman_region64f_union_rect(dest &C.pixman_region64f_t, source &C.pixman_region64f_t, x int, y int, width usize, height usize) C.pixman_bool_t
+fn C.pixman_region64f_union_rect(dest &C.pixman_region64f_t, source &C.pixman_region64f_t, x int, y int, width uint, height uint) C.pixman_bool_t
 fn C.pixman_region64f_union_rectf(dest &C.pixman_region64f_t, source &C.pixman_region64f_t, x f64, y f64, width f64, height f64) C.pixman_bool_t
 fn C.pixman_region64f_subtract(reg_d &C.pixman_region64f_t, reg_m &C.pixman_region64f_t, reg_s &C.pixman_region64f_t) C.pixman_bool_t
 fn C.pixman_region64f_inverse(new_reg &C.pixman_region64f_t, reg1 &C.pixman_region64f_t, inv_rect &C.pixman_box64f_t) C.pixman_bool_t
@@ -448,7 +448,7 @@ pub type Pixman_read_memory_func_t = fn (src voidptr, size int) u32
 
 pub type Pixman_write_memory_func_t = fn (dst voidptr, value u32, size int)
 
-pub type Pixman_image_destroy_func_t = fn (image &C.pixman_image_t, data voidptr)
+pub type Pixman_image_destroy_func_t = fn (image C.pixman_image_t, data voidptr)
 
 pub struct C.pixman_gradient_stop {
 	x C.pixman_fixed_t
@@ -642,43 +642,43 @@ fn C.pixman_format_supported_source(format Pixman_format_code_t) C.pixman_bool_t
 
 // pub constructors
 
-fn C.pixman_image_create_solid_fill(color &Pixman_color_t) &C.pixman_image_t
-fn C.pixman_image_create_linear_gradient(p1 &C.pixman_point_fixed_t, p2 &C.pixman_point_fixed_t, stops &Pixman_gradient_stop_t, n_stops int) &C.pixman_image_t
-fn C.pixman_image_create_radial_gradient(inner &C.pixman_point_fixed_t, outer &C.pixman_point_fixed_t, inner_radius C.pixman_fixed_t, outer_radius C.pixman_fixed_t, stops &Pixman_gradient_stop_t, n_stops int) &C.pixman_image_t
-fn C.pixman_image_create_conical_gradient(center &C.pixman_point_fixed_t, angle C.pixman_fixed_t, stops &Pixman_gradient_stop_t, n_stops int) &C.pixman_image_t
-fn C.pixman_image_create_bits(format Pixman_format_code_t, width int, height int, bits &uint32_t, rowstride_bytes int) &C.pixman_image_t
-fn C.pixman_image_create_bits_no_clear(format Pixman_format_code_t, width int, height int, bits &uint32_t, rowstride_bytes int) &C.pixman_image_t
+fn C.pixman_image_create_solid_fill(color &Pixman_color_t) C.pixman_image_t
+fn C.pixman_image_create_linear_gradient(p1 &C.pixman_point_fixed_t, p2 &C.pixman_point_fixed_t, stops &Pixman_gradient_stop_t, n_stops int) C.pixman_image_t
+fn C.pixman_image_create_radial_gradient(inner &C.pixman_point_fixed_t, outer &C.pixman_point_fixed_t, inner_radius C.pixman_fixed_t, outer_radius C.pixman_fixed_t, stops &Pixman_gradient_stop_t, n_stops int) C.pixman_image_t
+fn C.pixman_image_create_conical_gradient(center &C.pixman_point_fixed_t, angle C.pixman_fixed_t, stops &Pixman_gradient_stop_t, n_stops int) C.pixman_image_t
+fn C.pixman_image_create_bits(format Pixman_format_code_t, width int, height int, bits voidptr, rowstride_bytes int) C.pixman_image_t
+fn C.pixman_image_create_bits_no_clear(format Pixman_format_code_t, width int, height int, bits voidptr, rowstride_bytes int) C.pixman_image_t
 
 // destructor
 
-fn C.pixman_image_ref(image &C.pixman_image_t) &C.pixman_image_t
-fn C.pixman_image_unref(image &C.pixman_image_t) C.pixman_bool_t
-fn C.pixman_image_set_destroy_function(image &C.pixman_image_t, function C.pixman_image_destroy_func_t, data voidptr)
-fn C.pixman_image_get_destroy_data(image &C.pixman_image_t) voidptr
+fn C.pixman_image_ref(image C.pixman_image_t) C.pixman_image_t
+fn C.pixman_image_unref(image C.pixman_image_t) C.pixman_bool_t
+fn C.pixman_image_set_destroy_function(image C.pixman_image_t, function C.pixman_image_destroy_func_t, data voidptr)
+fn C.pixman_image_get_destroy_data(image C.pixman_image_t) voidptr
 
 // set properties
 
-fn C.pixman_image_set_clip_region(image &C.pixman_image_t, region &C.pixman_region16_t) C.pixman_bool_t
-fn C.pixman_image_set_clip_region32(image &C.pixman_image_t, region &C.pixman_region32_t) C.pixman_bool_t
-fn C.pixman_image_set_clip_region64f(image &C.pixman_image_t, region &C.pixman_region64f_t) C.pixman_bool_t
-fn C.pixman_image_set_has_client_clip(image &C.pixman_image_t, clien_clip C.pixman_bool_t)
-fn C.pixman_image_set_transform(image &C.pixman_image_t, transform &C.pixman_transform_t) C.pixman_bool_t
-fn C.pixman_image_set_repeat(image &C.pixman_image_t, repeat Pixman_repeat_t)
-fn C.pixman_image_set_dither(image &C.pixman_image_t, dither Pixman_dither_t)
-fn C.pixman_image_set_dither_offset(image &C.pixman_image_t, offset_x int, offset_y int)
-fn C.pixman_image_set_filter(image &C.pixman_image_t, filter Pixman_filter_t, filter_params &C.pixman_fixed_t, n_filter_params int) C.pixman_bool_t
-fn C.pixman_image_set_source_clipping(image &C.pixman_image_t, source_clipping C.pixman_bool_t)
-fn C.pixman_image_set_alpha_map(image &C.pixman_image_t, alpha_map &C.pixman_image_t, x int16_t, y int16_t)
-fn C.pixman_image_set_component_alpha(image &C.pixman_image_t, component_alpha C.pixman_bool_t)
-fn C.pixman_image_get_component_alpha(image &C.pixman_image_t) C.pixman_bool_t
-fn C.pixman_image_set_accessors(image &C.pixman_image_t, read_func Pixman_read_memory_func_t, write_func Pixman_write_memory_func_t)
-fn C.pixman_image_set_indexed(image &C.pixman_image_t, indexed &C.pixman_indexed_t)
-fn C.pixman_image_get_data(image &C.pixman_image_t) &u32
-fn C.pixman_image_get_width(image &C.pixman_image_t) int
-fn C.pixman_image_get_height(image &C.pixman_image_t) int
-fn C.pixman_image_get_stride(image &C.pixman_image_t) int
-fn C.pixman_image_get_depth(image &C.pixman_image_t) int
-fn C.pixman_image_get_format(image &C.pixman_image_t) Pixman_format_code_t
+fn C.pixman_image_set_clip_region(image C.pixman_image_t, region &C.pixman_region16_t) C.pixman_bool_t
+fn C.pixman_image_set_clip_region32(image C.pixman_image_t, region &C.pixman_region32_t) C.pixman_bool_t
+fn C.pixman_image_set_clip_region64f(image C.pixman_image_t, region &C.pixman_region64f_t) C.pixman_bool_t
+fn C.pixman_image_set_has_client_clip(image C.pixman_image_t, clien_clip C.pixman_bool_t)
+fn C.pixman_image_set_transform(image C.pixman_image_t, transform &C.pixman_transform_t) C.pixman_bool_t
+fn C.pixman_image_set_repeat(image C.pixman_image_t, repeat Pixman_repeat_t)
+fn C.pixman_image_set_dither(image C.pixman_image_t, dither Pixman_dither_t)
+fn C.pixman_image_set_dither_offset(image C.pixman_image_t, offset_x int, offset_y int)
+fn C.pixman_image_set_filter(image C.pixman_image_t, filter Pixman_filter_t, filter_params &C.pixman_fixed_t, n_filter_params int) C.pixman_bool_t
+fn C.pixman_image_set_source_clipping(image C.pixman_image_t, source_clipping C.pixman_bool_t)
+fn C.pixman_image_set_alpha_map(image C.pixman_image_t, alpha_map C.pixman_image_t, x int16_t, y int16_t)
+fn C.pixman_image_set_component_alpha(image C.pixman_image_t, component_alpha C.pixman_bool_t)
+fn C.pixman_image_get_component_alpha(image C.pixman_image_t) C.pixman_bool_t
+fn C.pixman_image_set_accessors(image C.pixman_image_t, read_func Pixman_read_memory_func_t, write_func Pixman_write_memory_func_t)
+fn C.pixman_image_set_indexed(image C.pixman_image_t, indexed &C.pixman_indexed_t)
+fn C.pixman_image_get_data(image C.pixman_image_t) voidptr
+fn C.pixman_image_get_width(image C.pixman_image_t) int
+fn C.pixman_image_get_height(image C.pixman_image_t) int
+fn C.pixman_image_get_stride(image C.pixman_image_t) int
+fn C.pixman_image_get_depth(image C.pixman_image_t) int
+fn C.pixman_image_get_format(image C.pixman_image_t) Pixman_format_code_t
 
 pub enum Pixman_kernel_t {
 	impulse
@@ -692,15 +692,15 @@ pub enum Pixman_kernel_t {
 }
 
 fn C.pixman_filter_create_separable_convolution(n_values &int, scale_x C.pixman_fixed_t, scale_y C.pixman_fixed_t, reconstruct_x Pixman_kernel_t, reconstruct_y Pixman_kernel_t, sample_x Pixman_kernel_t, sample_y Pixman_kernel_t, subsample_bits_x int, subsample_bits_y int) &C.pixman_fixed_t
-fn C.pixman_image_fill_rectangles(op Pixman_op_t, image &C.pixman_image_t, color &C.pixman_color_t, n_rects int, rects &C.pixman_rectangle16_t) C.pixman_bool_t
-fn C.pixman_image_fill_boxes(op Pixman_op_t, dest &C.pixman_image_t, color &C.pixman_color_t, n_boxes int, boxes &C.pixman_box32_t) C.pixman_bool_t
+fn C.pixman_image_fill_rectangles(op Pixman_op_t, image C.pixman_image_t, color &C.pixman_color_t, n_rects int, rects &C.pixman_rectangle16_t) C.pixman_bool_t
+fn C.pixman_image_fill_boxes(op Pixman_op_t, dest C.pixman_image_t, color &C.pixman_color_t, n_boxes int, boxes &C.pixman_box32_t) C.pixman_bool_t
 
 // composite
 
-fn C.pixman_compute_composite_region(region &C.pixman_region16_t, src_image &C.pixman_image_t, mask_image &C.pixman_image_t, dest_image &C.pixman_image_t, src_x int16_t, src_y int16_t, mask_x int16_t, mask_y int16_t, dest_x int16_t, dest_y int16_t, width uint16_t, height uint16_t) C.pixman_bool_t
-fn C.pixman_image_composite(op Pixman_op_t, src &C.pixman_image_t, mask &C.pixman_image_t, dest &C.pixman_image_t, src_x int16_t, src_y int16_t, mask_x int16_t, mask_y int16_t, dest_x int16_t, dest_y int16_t, width uint16_t, height uint16_t) C.pixman_bool_t
-fn C.pixman_image_composite32(op Pixman_op_t, src &C.pixman_image_t, mask &C.pixman_image_t, dest &C.pixman_image_t, src_x i32, src_y i32, mask_x i32, mask_y i32, dest_x i32, dest_y i32, width u32, height u32) C.pixman_bool_t
-fn C.pixman_image_composite64(op Pixman_op_t, src &C.pixman_image_t, mask &C.pixman_image_t, dest &C.pixman_image_t, src_x int64_t, src_y int64_t, mask_x int64_t, mask_y int64_t, dest_x int64_t, dest_y int64_t, width uint64_t, height uint64_t) C.pixman_bool_t
+fn C.pixman_compute_composite_region(region &C.pixman_region16_t, src_image C.pixman_image_t, mask_image C.pixman_image_t, dest_image C.pixman_image_t, src_x int16_t, src_y int16_t, mask_x int16_t, mask_y int16_t, dest_x int16_t, dest_y int16_t, width uint16_t, height uint16_t) C.pixman_bool_t
+fn C.pixman_image_composite(op Pixman_op_t, src C.pixman_image_t, mask C.pixman_image_t, dest C.pixman_image_t, src_x int16_t, src_y int16_t, mask_x int16_t, mask_y int16_t, dest_x int16_t, dest_y int16_t, width uint16_t, height uint16_t) C.pixman_bool_t
+fn C.pixman_image_composite32(op Pixman_op_t, src C.pixman_image_t, mask C.pixman_image_t, dest C.pixman_image_t, src_x i32, src_y i32, mask_x i32, mask_y i32, dest_x i32, dest_y i32, width u32, height u32) C.pixman_bool_t
+fn C.pixman_image_composite64(op Pixman_op_t, src C.pixman_image_t, mask C.pixman_image_t, dest C.pixman_image_t, src_x int64_t, src_y int64_t, mask_x int64_t, mask_y int64_t, dest_x int64_t, dest_y int64_t, width uint64_t, height uint64_t) C.pixman_bool_t
 
 // glyphs
 
@@ -718,12 +718,12 @@ fn C.pixman_glyph_cache_destroy(cache &C.pixman_glyph_cache_t)
 fn C.pixman_glyph_cache_freeze(cache &C.pixman_glyph_cache_t)
 fn C.pixman_glyph_cache_thaw(cache &C.pixman_glyph_cache_t)
 fn C.pixman_glyph_cache_lookup(cache &C.pixman_glyph_cache_t, font_key voidptr, glyph_key voidptr) voidptr
-fn C.pixman_glyph_cache_insert(cache &C.pixman_glyph_cache_t, font_key voidptr, glyph_key voidptr, origin_x int, origin_y int, glyph_image &C.pixman_image_t) C.pixman_bool_t
+fn C.pixman_glyph_cache_insert(cache &C.pixman_glyph_cache_t, font_key voidptr, glyph_key voidptr, origin_x int, origin_y int, glyph_image C.pixman_image_t) C.pixman_bool_t
 fn C.pixman_glyph_cache_remove(cache &C.pixman_glyph_cache_t, font_key voidptr, glyph_key voidptr)
 fn C.pixman_glyph_get_extents(cache &C.pixman_glyph_cache_t, n_glyphs int, glyphs &C.pixman_glyph_t, extents &C.pixman_box32_t)
 fn C.pixman_glyph_get_mask_format(cache &C.pixman_glyph_cache_t, n_glyphs int, glyphs &C.pixman_glyph_t) Pixman_format_code_t
-fn C.pixman_composite_glyphs(op Pixman_op_t, src &C.pixman_image_t, dest &C.pixman_image_t, mask_format Pixman_format_code_t, src_x i32, src_y i32, mask_x i32, mask_y i32, dest_x i32, dest_y i32, width i32, height i32, cache &C.pixman_glyph_cache_t, n_glyphs int, glyphs &C.pixman_glyph_t)
-fn C.pixman_composite_glyphs_no_mask(op Pixman_op_t, src &C.pixman_image_t, dest &C.pixman_image_t, src_x i32, src_y i32, dest_x i32, dest_y i32, cache &C.pixman_glyph_cache_t, n_glyphs int, glyphs &C.pixman_glyph_t)
+fn C.pixman_composite_glyphs(op Pixman_op_t, src C.pixman_image_t, dest C.pixman_image_t, mask_format Pixman_format_code_t, src_x i32, src_y i32, mask_x i32, mask_y i32, dest_x i32, dest_y i32, width i32, height i32, cache &C.pixman_glyph_cache_t, n_glyphs int, glyphs &C.pixman_glyph_t)
+fn C.pixman_composite_glyphs_no_mask(op Pixman_op_t, src C.pixman_image_t, dest C.pixman_image_t, src_x i32, src_y i32, dest_x i32, dest_y i32, cache &C.pixman_glyph_cache_t, n_glyphs int, glyphs &C.pixman_glyph_t)
 
 // trapezoids
 
@@ -781,10 +781,10 @@ fn C.pixman_sample_floor_y(y C.pixman_fixed_t, bpp int) C.pixman_fixed_t
 fn C.pixman_edge_step(e &C.pixman_edge_t, n int)
 fn C.pixman_edge_init(e &C.pixman_edge_t, bpp int, y_start C.pixman_fixed_t, x_top C.pixman_fixed_t, y_top C.pixman_fixed_t, x_bot C.pixman_fixed_t, y_bot C.pixman_fixed_t)
 fn C.pixman_line_fixed_edge_init(e &C.pixman_edge_t, bpp int, y C.pixman_fixed_t, line &C.pixman_line_fixed_t, x_off int, y_off int)
-fn C.pixman_rasterize_edges(image &C.pixman_image_t, l &C.pixman_edge_t, r &C.pixman_edge_t, t C.pixman_fixed_t, b C.pixman_fixed_t)
-fn C.pixman_add_traps(image &C.pixman_image_t, x_off int16_t, y_off int16_t, ntrap int, traps &C.pixman_trap_t)
-fn C.pixman_add_trapezoids(image &C.pixman_image_t, x_off int16_t, y_off int16_t, ntraps int, traps &C.pixman_trapezoid_t)
-fn C.pixman_rasterize_trapezoid(image &C.pixman_image_t, trap &C.pixman_trapezoid_t, x_off int, y_off int)
-fn C.pixman_composite_trapezoids(op Pixman_op_t, src &C.pixman_image_t, dst &C.pixman_image_t, mask_format Pixman_format_code_t, x_src int, y_src int, x_dst int, y_dst int, n_traps int, traps &C.pixman_trap_t)
-fn C.pixman_composite_triangles(op Pixman_op_t, src &C.pixman_image_t, dst &C.pixman_image_t, mask_format Pixman_format_code_t, x_src int, y_src int, x_dst int, y_dst int, n_tris int, tris &C.pixman_triangle_t)
-fn C.pixman_add_triangles(image &C.pixman_image_t, x_off u32, y_off u32, n_tris int, tris &C.pixman_triangle_t)
+fn C.pixman_rasterize_edges(image C.pixman_image_t, l &C.pixman_edge_t, r &C.pixman_edge_t, t C.pixman_fixed_t, b C.pixman_fixed_t)
+fn C.pixman_add_traps(image C.pixman_image_t, x_off int16_t, y_off int16_t, ntrap int, traps &C.pixman_trap_t)
+fn C.pixman_add_trapezoids(image C.pixman_image_t, x_off int16_t, y_off int16_t, ntraps int, traps &C.pixman_trapezoid_t)
+fn C.pixman_rasterize_trapezoid(image C.pixman_image_t, trap &C.pixman_trapezoid_t, x_off int, y_off int)
+fn C.pixman_composite_trapezoids(op Pixman_op_t, src C.pixman_image_t, dst C.pixman_image_t, mask_format Pixman_format_code_t, x_src int, y_src int, x_dst int, y_dst int, n_traps int, traps &C.pixman_trap_t)
+fn C.pixman_composite_triangles(op Pixman_op_t, src C.pixman_image_t, dst C.pixman_image_t, mask_format Pixman_format_code_t, x_src int, y_src int, x_dst int, y_dst int, n_tris int, tris &C.pixman_triangle_t)
+fn C.pixman_add_triangles(image C.pixman_image_t, x_off u32, y_off u32, n_tris int, tris &C.pixman_triangle_t)

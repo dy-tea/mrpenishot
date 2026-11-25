@@ -6,33 +6,37 @@ import pixman as px
 pub const rgb_channels = 3
 pub const rgba_channels = 4
 
-@[direct_array_access; unsafe]
-pub fn pack_row24_8(row_in &u8, width int, row_out &u8, format px.Pixman_format_code_t) {
-	mut offset := 0
+@[direct_array_access; inline]
+fn read_u32_le(row []u8, x int) u32 {
+	i := x * 4
+	return u32(row[i]) | (u32(row[i + 1]) << 8) | (u32(row[i + 2]) << 16) | (u32(row[i + 3]) << 24)
+}
+
+@[direct_array_access]
+pub fn pack_row24_8(row_in []u8, width int, mut row_out []u8) {
 	for x in 0 .. width {
 		p_idx := x * 3
-		row_out[offset] = row_in[p_idx] // R
-		row_out[offset + 1] = row_in[p_idx + 1] // G
-		row_out[offset + 2] = row_in[p_idx + 2] // B
-		offset += 3
+		o_idx := x * 3
+		row_out[o_idx] = row_in[p_idx] // R
+		row_out[o_idx + 1] = row_in[p_idx + 1] // G
+		row_out[o_idx + 2] = row_in[p_idx + 2] // B
 	}
 }
 
-@[direct_array_access; unsafe]
-pub fn pack_row32_8(row_in &u32, width int, row_out &u8, fully_opaque bool, format px.Pixman_format_code_t) {
+@[direct_array_access]
+pub fn pack_row32_8(row_in []u8, width int, mut row_out []u8, fully_opaque bool, format px.Pixman_format_code_t) {
 	mut offset := 0
 	for x in 0 .. width {
-		pixel := row_in[x]
+		pixel := read_u32_le(row_in, x)
 		mut r, mut g, mut b, mut a := match format {
-			.a8r8g8b8, .x8r8g8b8 {
-				u8((pixel >> 16) & 0xff), u8((pixel >> 8) & 0xff), u8(pixel & 0xff), u8((pixel >> 24) & 0xff)
-			}
-			.a8b8g8r8, .x8b8g8r8 {
+			.a8b8g8r8, .x8b8g8r8, .r8g8b8a8, .r8g8b8x8 {
 				u8(pixel & 0xff), u8((pixel >> 8) & 0xff), u8((pixel >> 16) & 0xff), u8((pixel >> 24) & 0xff)
 			}
-			// .bgra8888, .rgba8888
+			.a8r8g8b8, .x8r8g8b8, .b8g8r8a8, .b8g8r8x8 {
+				u8((pixel >> 16) & 0xff), u8((pixel >> 8) & 0xff), u8(pixel & 0xff), u8((pixel >> 24) & 0xff)
+			}
 			else {
-				u8((pixel >> 8) & 0xff), u8((pixel >> 16) & 0xff), u8((pixel >> 24) & 0xff), u8(pixel & 0xff)
+				u8((pixel >> 16) & 0xff), u8((pixel >> 8) & 0xff), u8(pixel & 0xff), u8((pixel >> 24) & 0xff)
 			}
 		}
 
@@ -54,10 +58,10 @@ pub fn pack_row32_8(row_in &u32, width int, row_out &u8, fully_opaque bool, form
 	}
 }
 
-@[direct_array_access; unsafe]
-pub fn pack_row32_10(row_in &u32, width int, row_out &u8, fully_opaque bool, format px.Pixman_format_code_t) {
+@[direct_array_access]
+pub fn pack_row32_10(row_in []u8, width int, mut row_out []u8, fully_opaque bool, format px.Pixman_format_code_t) {
 	for x in 0 .. width {
-		p := row_in[x]
+		p := read_u32_le(row_in, x)
 		g10 := (p >> 10) & 0x3FF
 		a2 := (p >> 30) & 0x3
 		r10, b10 := if format in [.a2b10g10r10, .x2b10g10r10] {
@@ -85,10 +89,10 @@ pub fn pack_row32_10(row_in &u32, width int, row_out &u8, fully_opaque bool, for
 	}
 }
 
-@[direct_array_access; unsafe]
-pub fn pack_row32_10_hdr(row_in &u32, width int, row_out &u8, fully_opaque bool, format px.Pixman_format_code_t) {
+@[direct_array_access]
+pub fn pack_row32_10_hdr(row_in []u8, width int, mut row_out []u8, fully_opaque bool, format px.Pixman_format_code_t) {
 	for x in 0 .. width {
-		p := row_in[x]
+		p := read_u32_le(row_in, x)
 		g10 := (p >> 10) & 0x3FF
 		a2 := (p >> 30) & 0x3
 		a16 := u16(a2 * 0x5555)
@@ -122,10 +126,10 @@ pub fn pack_row32_10_hdr(row_in &u32, width int, row_out &u8, fully_opaque bool,
 	}
 }
 
-@[direct_array_access; unsafe]
-pub fn pack_row32_10_to_32_8(row_in &u32, width int, row_out &u8, fully_opaque bool, format px.Pixman_format_code_t) {
+@[direct_array_access]
+pub fn pack_row32_10_to_32_8(row_in []u8, width int, mut row_out []u8, fully_opaque bool, format px.Pixman_format_code_t) {
 	for x in 0 .. width {
-		p := row_in[x]
+		p := read_u32_le(row_in, x)
 
 		g10 := (p >> 10) & 0x3FF
 		a2 := (p >> 30) & 0x3
@@ -154,10 +158,10 @@ pub fn pack_row32_10_to_32_8(row_in &u32, width int, row_out &u8, fully_opaque b
 	}
 }
 
-@[direct_array_access; unsafe]
-pub fn pack_row32_10_hdr_to_32_8(row_in &u32, width int, row_out &u8, fully_opaque bool, format px.Pixman_format_code_t) {
+@[direct_array_access]
+pub fn pack_row32_10_hdr_to_32_8(row_in []u8, width int, mut row_out []u8, fully_opaque bool, format px.Pixman_format_code_t) {
 	for x in 0 .. width {
-		p := row_in[x]
+		p := read_u32_le(row_in, x)
 
 		g10 := (p >> 10) & 0x3FF
 		a2 := (p >> 30) & 0x3

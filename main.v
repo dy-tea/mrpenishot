@@ -6,10 +6,15 @@ import jxl
 import png
 import flag
 import v.vmod
-import protocols.wayland as wlp
-import protocols.ext_image_copy_capture_v1 as cc
-
-#pkgconfig wayland-client
+import wayland
+import wayland.protocols.wayland as wl
+import wayland.protocols.ext_image_copy_capture_v1 as cc
+import wayland.protocols.ext_image_capture_source_v1 as cs
+import wayland.protocols.ext_foreign_toplevel_list_v1 as ft
+import wayland.protocols.xdg_output_unstable_v1 as xo
+import wayland.protocols.viewporter as vp
+import wayland.protocols.wlr_layer_shell_unstable_v1 as ls
+import wayland.protocols.color_management_v1 as cm
 
 const supported_formats = ['png', 'ppm', 'qoi', 'jxl']
 
@@ -23,18 +28,20 @@ fn (mut state State) capture_output(output &Output, include_cursor bool) {
 	state.captures << capture
 
 	options := if include_cursor {
-		u32(cc.ExtImageCopyCaptureManagerV1_Options.paint_cursors)
+		u32(cc.ext_image_copy_capture_manager_v1_options_paint_cursors)
 	} else {
 		0
 	}
 	if mut source_manager := state.ext_output_image_capture_source_manager_v1 {
-		mut source := source_manager.create_source(output.wl_output.proxy)
+		mut source := source_manager.create_source(output.wl_output) or { return }
 		if mut session_manager := state.ext_image_copy_capture_manager_v1 {
-			mut session := session_manager.create_session(source.proxy, options)
+			mut session := session_manager.create_session(source, options) or { return }
 			capture.ext_image_copy_capture_session_v1 = session
-			session.add_listener(&session_listener, capture)
+			session.set_listener(&SessionListener{
+				capture: capture
+			}) or {}
 		}
-		source.destroy()
+		source.destroy() or {}
 	}
 }
 
@@ -44,18 +51,20 @@ fn (mut state State) capture_toplevel(toplevel &Toplevel, include_cursor bool) {
 		toplevel: &toplevel
 	}
 	options := if include_cursor {
-		u32(cc.ExtImageCopyCaptureManagerV1_Options.paint_cursors)
+		u32(cc.ext_image_copy_capture_manager_v1_options_paint_cursors)
 	} else {
 		0
 	}
 	if mut source_manager := state.ext_foreign_toplevel_image_capture_source_manager_v1 {
-		mut source := source_manager.create_source(toplevel.handle.proxy)
+		mut source := source_manager.create_source(toplevel.handle) or { return }
 		if mut capture_manager := state.ext_image_copy_capture_manager_v1 {
-			mut session := capture_manager.create_session(source.proxy, options)
+			mut session := capture_manager.create_session(source, options) or { return }
 			capture.ext_image_copy_capture_session_v1 = session
-			session.add_listener(&session_listener, capture)
+			session.set_listener(&SessionListener{
+				capture: capture
+			}) or {}
 		}
-		source.destroy()
+		source.destroy() or {}
 	}
 	state.captures << capture
 }
@@ -72,8 +81,9 @@ fn main() {
 	output_name := fp.string('output', `o`, '', 'name of output to screenshot')
 	toplevel_identifier := fp.string('toplevel', `t`, '',
 		'use a toplevel as the screenshot source by its identifier')
-	freeze_screen_cmd := fp.string('freeze', `F`, '',
+	freeze_raw := fp.string('freeze', `F`, '',
 		'freeze the screen until passed command finishes or until the -g command finishes')
+	freeze_screen_cmd := freeze_raw
 	additional_args := fp.finalize() or {
 		eprintln(err)
 		println(fp.usage())
@@ -102,8 +112,13 @@ fn main() {
 	geometry_is_cmd := passed_geometry.starts_with('$') && !passed_geometry.starts_with('$-')
 	mut geometry_cmd := ''
 	if geometry_is_cmd {
-		geometry_cmd = passed_geometry.trim_left('$')
-		if freeze_screen_cmd != '' {
+		mut cmd_str := passed_geometry.trim_left('$')
+		// support command substitution syntax: $(cmd ...)
+		if cmd_str.starts_with('(') && cmd_str.ends_with(')') && cmd_str.len >= 2 {
+			cmd_str = cmd_str[1..cmd_str.len - 1]
+		}
+		geometry_cmd = cmd_str.trim_space()
+		if freeze_screen_cmd.len > 0 {
 			panic('ERROR: cannot use both --freeze and command prefix in -g')
 		}
 	}
@@ -118,30 +133,73 @@ fn main() {
 	}
 
 	// init display
-	display_proxy := C.wl_display_connect(unsafe { nil })
-	if display_proxy == unsafe { nil } {
-		panic('Failed to connect to Wayland display')
+	mut conn := wayland.connect() or { panic('Failed to connect to Wayland display') }
+	defer {
+		conn.close()
 	}
-	mut display := &wlp.WlDisplay{
-		proxy: display_proxy
-	}
+
+	globals := conn.globals() or { panic('Failed to get globals') }
 
 	// init state
 	mut state := State{
-		display:  display
-		registry: display.get_registry()
+		conn: &conn
 	}
-	state.registry.add_listener(&registry_listener, &state)
-	if C.wl_display_roundtrip(display_proxy) < 0 {
-		panic('wl_display_roundtrip failed')
+	for g in globals {
+		match g.interface {
+			'wl_shm' {
+				state.shm = wl.bind_wl_shm(conn, g) or { continue }
+			}
+			'wl_compositor' {
+				state.compositor = wl.bind_wl_compositor(conn, g) or { continue }
+			}
+			'wl_output' {
+				mut output := &Output{
+					state:     &state
+					scale:     1
+					wl_output: wl.bind_wl_output(conn, g) or { continue }
+				}
+				output.wl_output.set_listener(&OutputListener{
+					output: output
+				}) or {}
+				state.outputs << output
+			}
+			'wp_color_manager_v1' {
+				state.wp_color_manager_v1 = cm.bind_wp_color_manager_v1(conn, g) or { continue }
+			}
+			'zxdg_output_manager_v1' {
+				state.zxdg_output_manager_v1 = xo.bind_zxdg_output_manager_v1(conn, g) or { continue }
+			}
+			'ext_output_image_capture_source_manager_v1' {
+				state.ext_output_image_capture_source_manager_v1 = cs.bind_ext_output_image_capture_source_manager_v1(conn, g) or { continue }
+			}
+			'ext_foreign_toplevel_image_capture_source_manager_v1' {
+				state.ext_foreign_toplevel_image_capture_source_manager_v1 = cs.bind_ext_foreign_toplevel_image_capture_source_manager_v1(conn, g) or { continue }
+			}
+			'ext_foreign_toplevel_list_v1' {
+				state.ext_foreign_toplevel_list_v1 = ft.bind_ext_foreign_toplevel_list_v1(conn, g) or { continue }
+			}
+			'ext_image_copy_capture_manager_v1' {
+				state.ext_image_copy_capture_manager_v1 = cc.bind_ext_image_copy_capture_manager_v1(conn, g) or { continue }
+			}
+			'wp_viewporter' {
+				state.wp_viewporter = vp.bind_wp_viewporter(conn, g) or { continue }
+			}
+			'zwlr_layer_shell_v1' {
+				state.wlr_layer_shell_v1 = ls.bind_zwlr_layer_shell_v1(conn, g) or { continue }
+			}
+			else {}
+		}
 	}
+
+	// roundtrip to receive wl_output events
+	conn.roundtrip() or { panic('wl_display_roundtrip failed') }
 
 	// add toplevel listener if available
 	if mut list := state.ext_foreign_toplevel_list_v1 {
-		list.add_listener(&foreign_toplevel_list_listener, &state)
-		if C.wl_display_roundtrip(display_proxy) < 0 {
-			panic('wl_display_roundtrip failed')
-		}
+		list.set_listener(&ForeignToplevelListListener{
+			state: &state
+		}) or {}
+		conn.roundtrip() or { panic('wl_display_roundtrip failed') }
 	}
 
 	// check for state init
@@ -160,7 +218,7 @@ fn main() {
 	if state.outputs.len == 0 {
 		panic('no outputs found')
 	}
-	needs_freeze := freeze_screen_cmd != '' || geometry_is_cmd
+	needs_freeze := freeze_screen_cmd.len > 0 || geometry_is_cmd
 	if needs_freeze {
 		if state.compositor == none {
 			panic('wl_compositor not supported by compositor')
@@ -176,9 +234,11 @@ fn main() {
 	// init output manager
 	if mut manager := state.zxdg_output_manager_v1 {
 		for mut output in state.outputs {
-			output.xdg_output = manager.get_xdg_output(output.wl_output.proxy)
+			output.xdg_output = manager.get_xdg_output(output.wl_output) or { continue }
 			if mut xdg := output.xdg_output {
-				xdg.add_listener(&xdg_output_listener, output)
+				xdg.set_listener(&XdgOutputListener{
+					output: output
+				}) or {}
 			}
 		}
 	} else {
@@ -188,21 +248,22 @@ fn main() {
 		}
 	}
 	if state.zxdg_output_manager_v1 != none {
-		if C.wl_display_roundtrip(display_proxy) < 0 {
-			panic('wl_display_roundtrip failed')
-		}
+		conn.roundtrip() or { panic('wl_display_roundtrip failed') }
 	}
 
 	// init color management for outputs
 	if mut color_manager := state.wp_color_manager_v1 {
 		for mut output in state.outputs {
-			mut cm_output := color_manager.get_output(output.wl_output.proxy)
-			cm_output.add_listener(&cm_output_listener, state)
-			mut description := cm_output.get_image_description()
-			description.add_listener(&cm_image_description_listener, output.state)
-			if C.wl_display_roundtrip(display_proxy) < 0 {
-				panic('wl_display_roundtrip failed')
-			}
+			mut cm_output := color_manager.get_output(output.wl_output) or { continue }
+			output.cm_output = cm_output
+			cm_output.set_listener(&CmOutputListener{
+				state: &state
+			}) or {}
+			mut description := cm_output.get_image_description() or { continue }
+			description.set_listener(&CmImageDescriptionListener{
+				state: &state
+			}) or {}
+			conn.roundtrip() or { panic('wl_display_roundtrip failed') }
 		}
 	}
 
@@ -247,7 +308,8 @@ fn main() {
 	// dispatch initial captures to get buffer data for overlays
 	mut done := false
 	expected_cm := if state.wp_color_manager_v1 != none { state.outputs.len } else { 0 }
-	for !done && C.wl_display_dispatch(display_proxy) != -1 {
+	for !done {
+		conn.dispatch() or { break }
 		done = state.n_done == state.captures.len && state.n_cm_done >= expected_cm
 	}
 
@@ -262,15 +324,15 @@ fn main() {
 		// run command in background thread
 		result_ch := chan string{cap: 1}
 		spawn fn (cmd string, ch chan string) {
-			result := os.execute(cmd)
+			result := os.exec(['sh', '-c', cmd])
 			ch <- result.output
 		}(geometry_cmd, result_ch)
 
 		// process events while waiting for command
 		mut cmd_output := ''
 		for {
-			C.wl_display_dispatch(display_proxy)
-			C.wl_display_flush(display_proxy)
+			conn.dispatch() or { break }
+			conn.flush() or {}
 			select {
 				output := <-result_ch {
 					cmd_output = output
@@ -285,7 +347,7 @@ fn main() {
 
 		// get geometry from command output
 		geometry = Geometry.new(cmd_output.trim('\n')) or { panic('invalid geometry from command') }
-	} else if freeze_screen_cmd != '' {
+	} else if freeze_screen_cmd.len > 0 {
 		mut overlays := []&Overlay{}
 		for capture in state.captures {
 			overlay := Overlay.new(capture)
@@ -295,14 +357,14 @@ fn main() {
 		// run command in background thread
 		ch := chan int{cap: 1}
 		spawn fn (cmd string, result_ch chan int) {
-			result := os.execute(cmd)
+			result := os.exec(['sh', '-c', cmd])
 			result_ch <- result.exit_code
 		}(freeze_screen_cmd, ch)
 
 		// process events while waiting for command
 		for {
-			C.wl_display_dispatch(display_proxy)
-			C.wl_display_flush(display_proxy)
+			conn.dispatch() or { break }
+			conn.flush() or {}
 			select {
 				exit_code := <-ch {
 					if exit_code != 0 {
@@ -327,7 +389,7 @@ fn main() {
 	fully_opaque := !state.captures.any(it.toplevel != none)
 
 	// render image
-	image := render(&state, geometry, scale, fully_opaque) or { panic(err) }
+	image := render(&state, &geometry, scale, fully_opaque) or { panic(err) }
 
 	// encode image
 	encoded := match image_format {
@@ -362,10 +424,10 @@ fn main() {
 	C.pixman_image_unref(image)
 	for mut capture in state.captures {
 		if mut frame := capture.ext_image_copy_capture_frame_v1 {
-			frame.destroy()
+			frame.destroy() or {}
 		}
 		if mut session := capture.ext_image_copy_capture_session_v1 {
-			session.destroy()
+			session.destroy() or {}
 		}
 		if mut buffer := capture.buffer {
 			buffer.destroy()
@@ -373,33 +435,32 @@ fn main() {
 	}
 	for mut output in state.outputs {
 		if mut xdg := output.xdg_output {
-			xdg.destroy()
+			xdg.destroy() or {}
 		}
 		if mut cm_output := output.cm_output {
-			cm_output.destroy()
+			cm_output.destroy() or {}
 		}
-		output.wl_output.release()
+		output.wl_output.release() or {}
 	}
 	for mut toplevel in state.toplevels {
-		toplevel.handle.destroy()
+		toplevel.handle.destroy() or {}
 	}
 	if mut manager := state.ext_foreign_toplevel_list_v1 {
-		manager.destroy()
+		manager.destroy() or {}
 	}
 	if mut manager := state.ext_output_image_capture_source_manager_v1 {
-		manager.destroy()
+		manager.destroy() or {}
 	}
 	if mut manager := state.ext_foreign_toplevel_image_capture_source_manager_v1 {
-		manager.destroy()
+		manager.destroy() or {}
 	}
 	if mut manager := state.ext_image_copy_capture_manager_v1 {
-		manager.destroy()
+		manager.destroy() or {}
 	}
 	if mut manager := state.zxdg_output_manager_v1 {
-		manager.destroy()
+		manager.destroy() or {}
 	}
 	if mut manager := state.wp_viewporter {
-		manager.destroy()
+		manager.destroy() or {}
 	}
-	C.wl_display_disconnect(display_proxy)
 }

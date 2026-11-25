@@ -1,27 +1,35 @@
 module main
 
-import protocols.wayland as wlp
+import wayland.protocols.wayland as wl
 
-fn output_handle_geometry(mut output Output, obj voidptr, x int, y int, physical_width int, physical_height int, subpixel int, make &char, model &char, transform int) {
-	output.x = x
-	output.y = y
-	output.transform = unsafe { wlp.WlOutput_Transform(transform) }
+struct OutputListener {
+mut:
+	output &Output
 }
 
-fn output_handle_mode(mut output Output, obj voidptr, flags u32, width int, height int, refresh int) {
-	if flags & u32(wlp.WlOutput_Mode.current) != 0 {
-		output.mode_width = width
-		output.mode_height = height
+fn (mut l OutputListener) geometry(_ wl.WlOutput, x i32, y i32, _ i32, _ i32, _ i32, _ string, _ string, transform i32) {
+	l.output.x = int(x)
+	l.output.y = int(y)
+	l.output.transform = u32(transform)
+}
+
+fn (mut l OutputListener) mode(_ wl.WlOutput, flags u32, width i32, height i32, _ i32) {
+	if flags & u32(wl.wl_output_mode_current) != 0 {
+		l.output.mode_width = int(width)
+		l.output.mode_height = int(height)
 	}
 }
 
-fn output_handle_scale(mut output Output, obj voidptr, factor int) {
-	output.scale = factor
+fn (mut l OutputListener) done(_ wl.WlOutput) {
 }
 
-fn output_handle_name(mut output Output, obj voidptr, name &char) {
-	output.name = unsafe { name.vstring() }
+fn (mut l OutputListener) scale(_ wl.WlOutput, factor i32) {
+	l.output.scale = int(factor)
 }
 
-const output_listener = wlp.wloutput_listener(output_handle_geometry, output_handle_mode,
-	none, output_handle_scale, output_handle_name, none)
+fn (mut l OutputListener) name(_ wl.WlOutput, name string) {
+	l.output.name = name
+}
+
+fn (mut l OutputListener) description(_ wl.WlOutput, _ string) {
+}
